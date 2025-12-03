@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navbat Olish - Operator AI</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎫</text></svg>">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/queue.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/chatbot.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="brand">
+                    <span class="brand-icon">🤖</span>
+                    <span class="brand-name gradient-text">Operator AI</span>
+                </a>
+                <div class="language-switcher"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Step Indicator -->
+            <div class="steps-indicator" style="display: none;">
+                <div class="step-item active" data-step="1">
+                    <div class="step-circle">1</div>
+                    <div class="step-label" data-i18n="select_organization">Tashkilot</div>
+                </div>
+                <div class="step-line"></div>
+                <div class="step-item" data-step="2">
+                    <div class="step-circle">2</div>
+                    <div class="step-label" data-i18n="select_branch">Filial</div>
+                </div>
+                <div class="step-line"></div>
+                <div class="step-item" data-step="3">
+                    <div class="step-circle">3</div>
+                    <div class="step-label" data-i18n="select_service">Xizmat</div>
+                </div>
+                <div class="step-line"></div>
+                <div class="step-item" data-step="4">
+                    <div class="step-circle">4</div>
+                    <div class="step-label" data-i18n="your_number">Raqam</div>
+                </div>
+            </div>
+
+            <!-- Step 1: Select Organization -->
+            <div class="step-content" id="step-1">
+                <div class="step-header">
+                    <h2 class="step-title" data-i18n="select_organization">Tashkilotni tanlang</h2>
+                    <p class="step-subtitle">Qaysi turdagi xizmat kerak?</p>
+                </div>
+
+                <div class="organizations-grid" id="organizations-grid">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+
+                <div class="footer-notification" style="margin-top: 50px; color: #666; font-size: 14px;">
+                    <p>Navbatingiz yaqinlashganda sizga xabar beramiz</p>
+                </div>
+            </div>
+
+            <!-- Step 2: Select Branch -->
+            <div class="step-content hidden" id="step-2">
+                <div class="step-header">
+                    <h2 class="step-title" data-i18n="select_branch">Filialni tanlang</h2>
+                    <p class="step-subtitle">Qaysi filialga tashrif buyurmoqchisiz?</p>
+                </div>
+
+                <div class="branches-grid" id="branches-grid">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+
+                <button class="btn btn-secondary mt-xl" onclick="QueueApp.goToStep(1)">
+                    <span data-i18n="back">Orqaga</span>
+                </button>
+            </div>
+
+            <!-- Step 3: Select Service -->
+            <div class="step-content hidden" id="step-3">
+                <div class="step-header">
+                    <h2 class="step-title" data-i18n="select_service">Xizmatni tanlang</h2>
+                    <p class="step-subtitle">Qanday xizmat kerak?</p>
+                </div>
+
+                <div class="services-grid" id="services-grid">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+
+                <button class="btn btn-secondary mt-xl" onclick="QueueApp.goToStep(2)">
+                    <span data-i18n="back">Orqaga</span>
+                </button>
+            </div>
+
+            <!-- Step 3.5: Select Date & Time -->
+            <div class="step-content hidden" id="step-datetime">
+                <div class="step-header">
+                    <h2 class="step-title">Vaqtni tanlang</h2>
+                    <p class="step-subtitle">Qachon kelishni xohlaysiz?</p>
+                </div>
+
+                <div class="datetime-container">
+                    <div class="form-group">
+                        <label class="form-label">Sana</label>
+                        <input type="date" class="form-input" id="booking-date">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Vaqt</label>
+                        <div class="time-slots" id="time-slots">
+                            <!-- Time slots will be generated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ticket-actions">
+                    <button class="btn btn-secondary" onclick="QueueApp.goToStep(3)">
+                        <span data-i18n="back">Orqaga</span>
+                    </button>
+                    <button class="btn btn-primary" onclick="QueueApp.confirmBooking()" id="confirm-booking-btn"
+                        disabled>
+                        <span>Davom etish</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 3.7: Registration/Login -->
+            <div class="step-content hidden" id="step-auth">
+                <div class="step-header">
+                    <h2 class="step-title">Ro'yxatdan o'tish</h2>
+                    <p class="step-subtitle">Navbat olish uchun tizimga kiring</p>
+                </div>
+
+                <div class="auth-container">
+                    <!-- Telegram Login -->
+                    <div class="auth-option">
+                        <button class="btn btn-telegram" onclick="QueueApp.handleTelegramLogin()">
+                            <span>📱</span>
+                            <span>Telegram orqali kirish</span>
+                        </button>
+                        <p class="auth-hint">Tezkor va xavfsiz</p>
+                    </div>
+
+                    <div class="auth-divider">
+                        <span>yoki</span>
+                    </div>
+
+                    <!-- Phone Registration/Login -->
+                    <div class="auth-option">
+                        <div class="auth-tabs">
+                            <button class="auth-tab active" onclick="QueueApp.switchAuthTab('register')"
+                                id="tab-register">
+                                Ro'yxatdan o'tish
+                            </button>
+                            <button class="auth-tab" onclick="QueueApp.switchAuthTab('login')" id="tab-login">
+                                Kirish
+                            </button>
+                        </div>
+
+                        <!-- Register Form -->
+                        <div class="auth-form" id="form-register">
+                            <div class="form-group">
+                                <label class="form-label">Telefon raqam</label>
+                                <input type="tel" class="form-input" id="register-phone" placeholder="+998901234567"
+                                    maxlength="13">
+                                <small class="form-hint">Format: +998XXXXXXXXX</small>
+                            </div>
+                            <button class="btn btn-primary btn-block" onclick="QueueApp.handlePhoneRegister()">
+                                Ro'yxatdan o'tish
+                            </button>
+                        </div>
+
+                        <!-- Login Form -->
+                        <div class="auth-form hidden" id="form-login">
+                            <div class="form-group">
+                                <label class="form-label">Telefon raqam</label>
+                                <input type="tel" class="form-input" id="login-phone" placeholder="+998901234567"
+                                    maxlength="13">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Parol</label>
+                                <input type="text" class="form-input" id="login-password" placeholder="Parolni kiriting"
+                                    maxlength="6">
+                            </div>
+                            <button class="btn btn-primary btn-block" onclick="QueueApp.handlePhoneLogin()">
+                                Kirish
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Success Message -->
+                    <div class="auth-success hidden" id="auth-success">
+                        <div class="success-icon">✅</div>
+                        <h3>Muvaffaqiyatli ro'yxatdan o'tdingiz!</h3>
+                        <div class="password-display" id="password-display">
+                            <p>Sizning parolingiz:</p>
+                            <div class="password-code" id="generated-password"></div>
+                            <small>⚠️ Parolni eslab qoling yoki saqlang. Keyingi safar kirish uchun kerak
+                                bo'ladi.</small>
+                        </div>
+                        <button class="btn btn-primary" onclick="QueueApp.proceedToTicket()">
+                            Davom etish
+                        </button>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div class="auth-error hidden" id="auth-error">
+                        <div class="error-icon">❌</div>
+                        <p id="auth-error-message"></p>
+                    </div>
+                </div>
+
+                <div class="ticket-actions" style="margin-top: 20px;">
+                    <button class="btn btn-secondary" onclick="QueueApp.goToStep(3.5)">
+                        <span data-i18n="back">Orqaga</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 4: Queue Ticket -->
+            <div class="step-content hidden" id="step-4">
+                <div class="ticket-card">
+                    <div class="ticket-header">
+                        <h2 class="ticket-title" data-i18n="ticket_created">Navbat yaratildi!</h2>
+                        <p class="ticket-subtitle">Iltimos, navbatingizni kuting</p>
+                    </div>
+
+                    <div class="ticket-number-section">
+                        <div class="ticket-label" data-i18n="your_number">Sizning raqamingiz</div>
+                        <div class="ticket-number" id="ticket-number">A-000</div>
+                    </div>
+
+                    <div class="ticket-info">
+                        <div class="ticket-info-row">
+                            <span data-i18n="organization">Tashkilot:</span>
+                            <strong id="ticket-org"></strong>
+                        </div>
+                        <div class="ticket-info-row">
+                            <span data-i18n="branch">Filial:</span>
+                            <strong id="ticket-branch"></strong>
+                        </div>
+                        <div class="ticket-info-row">
+                            <span data-i18n="service">Xizmat:</span>
+                            <strong id="ticket-service"></strong>
+                        </div>
+                        <div class="ticket-info-row">
+                            <span>Vaqt:</span>
+                            <strong id="ticket-time"></strong>
+                        </div>
+                        <div class="ticket-info-row">
+                            <span data-i18n="queue_position">Navbatdagi o'rningiz:</span>
+                            <strong id="ticket-position">-</strong>
+                        </div>
+                        <div class="ticket-info-row">
+                            <span data-i18n="estimated_wait">Taxminiy kutish:</span>
+                            <strong id="ticket-wait">-</strong>
+                        </div>
+                    </div>
+
+                    <div class="ticket-qr">
+                        <img id="ticket-qr-code" src="" alt="QR Code">
+                    </div>
+
+                    <div class="ticket-actions">
+                        <button class="btn btn-primary" onclick="QueueApp.printTicket()">
+                            <span>🖨️</span>
+                            <span data-i18n="print">Chop etish</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="QueueApp.reset()">
+                            <span>🔄</span>
+                            <span>Yangi navbat</span>
+                        </button>
+                    </div>
+
+                    <div class="ticket-footer">
+                        <p>Navbatingiz yaqinlashganda sizga xabar beramiz</p>
+                    </div>
+                </div>
+
+                <!-- Queue Status -->
+                <div class="queue-status card mt-xl">
+                    <h3 class="card-title" data-i18n="current_serving">Hozir xizmat ko'rsatilmoqda</h3>
+                    <div class="serving-list" id="serving-list">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/language.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/queue-manager.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/queue.js"></script>
+    <script src="js/ai-chatbot.js"></script>
+
+    <script>
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            Database.init();
+            Language.init();
+            QueueApp.init();
+            AIChatbot.init();
+        });
+    </script>
+</body>
+
+</html>

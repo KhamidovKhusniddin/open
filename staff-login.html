@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xodimlar Kirish - Operator AI</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👨‍💼</text></svg>">
+    <link rel="stylesheet" href="css/main.css">
+    <style>
+        body {
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .login-card {
+            background: var(--bg-primary);
+            padding: 2.5rem;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .login-logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .login-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            min-height: 1.25rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .error-message.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-card">
+        <span class="login-logo">👨‍💼</span>
+        <h1 class="login-title">Operator AI Staff</h1>
+        <p class="login-subtitle">Xodimlar uchun tizimga kirish</p>
+
+        <form id="login-form" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" id="username" class="form-input" placeholder="staff1" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Parol</label>
+                <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-full">
+                Kirish
+            </button>
+
+            <div id="error-message" class="error-message">Login yoki parol noto'g'ri</div>
+        </form>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/staffdata.js"></script>
+    <script>
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('error-message');
+
+            console.log('Attempting login with username:', username);
+
+            // Validate credentials using StaffCredentials
+            if (StaffCredentials.validate(username, password)) {
+                console.log('Credentials validated successfully');
+
+                // Get staffId from credentials
+                const staffId = StaffCredentials.getStaffId(username);
+                console.log('Staff ID:', staffId);
+
+                // Get staff data from database using staffId
+                const allStaff = Database.getStaff();
+                console.log('All staff from database:', allStaff);
+                console.log('Total staff count:', allStaff ? allStaff.length : 0);
+
+                const staff = allStaff ? allStaff.find(s => s.id === staffId) : null;
+                console.log('Found staff:', staff);
+
+                if (staff) {
+                    // Success - add username to staff object
+                    staff.username = username;
+                    sessionStorage.setItem('staff_auth', JSON.stringify(staff));
+                    console.log('Login successful, redirecting...');
+                    window.location.href = 'staff.html';
+                } else {
+                    // Username valid but not in database
+                    console.error('Staff ID not found in database:', staffId);
+                    errorEl.textContent = 'Xodim ma\'lumotlari topilmadi';
+                    errorEl.classList.add('visible');
+                    setTimeout(() => errorEl.classList.remove('visible'), 3000);
+                }
+            } else {
+                // Error
+                console.log('Credentials validation failed');
+                errorEl.textContent = 'Login yoki parol noto\'g\'ri';
+                errorEl.classList.add('visible');
+                document.getElementById('password').value = '';
+
+                setTimeout(() => {
+                    errorEl.classList.remove('visible');
+                }, 3000);
+            }
+        }
+
+        // Check if already logged in
+        if (sessionStorage.getItem('staff_auth')) {
+            window.location.href = 'staff.html';
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Kirish - Operator AI</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔒</text></svg>">
+    <link rel="stylesheet" href="css/main.css">
+    <style>
+        body {
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .login-card {
+            background: var(--bg-primary);
+            padding: 2.5rem;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .login-logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: var(--primary-gradient);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .login-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .password-wrapper {
+            position: relative;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.25rem;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        .password-toggle:hover {
+            opacity: 1;
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            min-height: 1.25rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .error-message.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-card">
+        <span class="login-logo">🤖</span>
+        <h1 class="login-title">Operator AI Admin</h1>
+        <p class="login-subtitle">Tizimga kirish uchun ma'lumotlarni kiriting</p>
+
+        <form id="login-form" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label class="form-label">Login</label>
+                <input type="text" id="username" class="form-input" placeholder="Firsttime" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Parol</label>
+                <div class="password-wrapper">
+                    <input type="password" id="password" class="form-input" placeholder="••••••••" required
+                        style="padding-right: 3rem;">
+                    <button type="button" class="password-toggle" onclick="togglePassword()">👁️</button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-full">
+                Kirish
+            </button>
+
+            <div id="error-message" class="error-message">Login yoki parol noto'g'ri</div>
+        </form>
+    </div>
+
+    <script src="js/admin-config.js"></script>
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleBtn = document.querySelector('.password-toggle');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleBtn.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggleBtn.textContent = '👁️';
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('error-message');
+
+            // Use credentials from config file
+            if (username === AdminConfig.username && password === AdminConfig.password) {
+                // Success
+                sessionStorage.setItem(AdminConfig.sessionKey, 'true');
+                window.location.href = 'admin.html';
+            } else {
+                // Error
+                errorEl.classList.add('visible');
+                document.getElementById('password').value = '';
+
+                setTimeout(() => {
+                    errorEl.classList.remove('visible');
+                }, 3000);
+            }
+        }
+
+        // Check if already logged in
+        if (sessionStorage.getItem(AdminConfig.sessionKey) === 'true') {
+            window.location.href = 'admin.html';
+        }
+    </script>
+</body>
+
+</html>

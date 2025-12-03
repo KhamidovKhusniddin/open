@@ -1,0 +1,811 @@
+// AI Chatbot - Professional Queue Management Assistant
+// Uzbekistan's first intelligent queue management chatbot
+
+const AIChatbot = {
+    // OpenAI API Configuration
+    OPENAI_API_KEY: 'sk-abcd1234efgh5678abcd1234efgh5678abcd1234',
+    OPENAI_API_URL: 'https://api.openai.com/v1/chat/completions',
+    OPENAI_MODEL: 'gpt-3.5-turbo',
+
+    // Chat state
+    isOpen: false,
+    isTyping: false,
+    messages: [],
+    conversationContext: [], // Store conversation history
+
+    /**
+     * Initialize chatbot
+     */
+    init() {
+        this.createChatWidget();
+        this.loadChatHistory();
+        console.log('🤖 Operator AI Chatbot initialized');
+    },
+
+    /**
+     * Create chat widget UI
+     */
+    createChatWidget() {
+        if (document.getElementById('ai-chatbot')) return;
+
+        const widget = document.createElement('div');
+        widget.id = 'ai-chatbot';
+        widget.className = 'ai-chatbot';
+        widget.innerHTML = `
+      <button class="chat-toggle" id="chat-toggle">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span class="chat-badge" id="chat-badge" style="display: none;">1</span>
+      </button>
+      
+      <div class="chat-window" id="chat-window" style="display: none;">
+        <div class="chat-header">
+          <div class="chat-header-info">
+            <div class="chat-avatar">🤖</div>
+            <div>
+              <div class="chat-title">Operator AI</div>
+              <div class="chat-status">Online</div>
+            </div>
+          </div>
+          <button class="chat-close" id="chat-close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="chat-messages" id="chat-messages"></div>
+        
+        <div class="chat-input-container">
+          <input 
+            type="text" 
+            class="chat-input" 
+            id="chat-input" 
+            placeholder="Savolingizni yozing..."
+          />
+          <button class="chat-send" id="chat-send">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `;
+
+        document.body.appendChild(widget);
+
+        // Event listeners
+        document.getElementById('chat-toggle').addEventListener('click', () => this.toggleChat());
+        document.getElementById('chat-close').addEventListener('click', () => this.closeChat());
+        document.getElementById('chat-send').addEventListener('click', () => this.sendMessage());
+        document.getElementById('chat-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.sendMessage();
+        });
+
+        // Welcome message
+        if (this.messages.length === 0) {
+            this.addMessage('bot', this.getWelcomeMessage());
+        }
+    },
+
+    /**
+     * Get personalized welcome message
+     */
+    getWelcomeMessage() {
+        const hour = new Date().getHours();
+        const lang = Language.getLanguage();
+
+        let greeting = '';
+        if (lang === 'uz') {
+            if (hour < 12) greeting = 'Xayrli tong! ☀️';
+            else if (hour < 18) greeting = 'Xayrli kun! 👋';
+            else greeting = 'Xayrli kech! 🌙';
+
+            return `${greeting}\n\nMen **Operator AI** - O'zbekistonning birinchi aqlli navbat yordamchisiman! 🤖\n\nSizga qanday yordam bera olaman?`;
+        } else if (lang === 'ru') {
+            if (hour < 12) greeting = 'Доброе утро! ☀️';
+            else if (hour < 18) greeting = 'Добрый день! 👋';
+            else greeting = 'Добрый вечер! 🌙';
+
+            return `${greeting}\n\nЯ **Operator AI** - первый умный помощник по очередям в Узбекистане! 🤖\n\nЧем могу помочь?`;
+        } else {
+            if (hour < 12) greeting = 'Good morning! ☀️';
+            else if (hour < 18) greeting = 'Good afternoon! 👋';
+            else greeting = 'Good evening! 🌙';
+
+            return `${greeting}\n\nI'm **Operator AI** - Uzbekistan's first intelligent queue assistant! 🤖\n\nHow can I help you?`;
+        }
+    },
+
+    toggleChat() {
+        this.isOpen = !this.isOpen;
+        const chatWindow = document.getElementById('chat-window');
+        const chatBadge = document.getElementById('chat-badge');
+
+        if (this.isOpen) {
+            chatWindow.style.display = 'flex';
+            chatBadge.style.display = 'none';
+            document.getElementById('chat-input').focus();
+        } else {
+            chatWindow.style.display = 'none';
+        }
+    },
+
+    closeChat() {
+        this.isOpen = false;
+        document.getElementById('chat-window').style.display = 'none';
+    },
+
+    /**
+     * Send message - Main intelligence hub
+     */
+    async sendMessage() {
+        if (this.isTyping) return;
+
+        const input = document.getElementById('chat-input');
+        const message = input.value.trim();
+        if (!message) return;
+
+        this.addMessage('user', message);
+        input.value = '';
+        this.showTypingIndicator();
+
+        try {
+            // Process message with intelligent routing
+            const response = await this.processIntelligentMessage(message);
+            this.hideTypingIndicator();
+            this.addMessage('bot', response.text);
+
+            // Show action button if needed
+            if (response.action === 'queue') {
+                this.addQueueButton();
+            }
+        } catch (error) {
+            console.error('Chat error:', error);
+            this.hideTypingIndicator();
+            this.addMessage('bot', this.getErrorMessage());
+        }
+    },
+
+    /**
+     * Intelligent message processing
+     */
+    async processIntelligentMessage(message) {
+        const lang = Language.getLanguage();
+        const lowerMsg = message.toLowerCase();
+
+        // 1. Check for queue number status
+        const queueMatch = message.match(/[A-Z]-\d{3}/i);
+        if (queueMatch) {
+            return {
+                text: this.getQueueStatus(queueMatch[0].toUpperCase()),
+                action: null
+            };
+        }
+
+        // 2. Want to get queue
+        if (this.matchesIntent(lowerMsg, ['navbat kerak', 'navbat olish', 'raqam kerak', 'очередь нужна', 'need queue'])) {
+            return {
+                text: lang === 'uz' ? 'Ajoyib! 🎫 Sizga navbat olishda yordam beraman.' :
+                    lang === 'ru' ? 'Отлично! 🎫 Помогу вам получить номер очереди.' :
+                        'Great! 🎫 I\'ll help you get a queue number.',
+                action: 'queue'
+            };
+        }
+
+        // 3. System information
+        if (this.matchesIntent(lowerMsg, ['tizim haqida', 'operator ai', 'bu nima', 'о системе', 'about'])) {
+            return { text: this.getSystemInfo(), action: null };
+        }
+
+        // 4. Organizations list
+        if (this.matchesIntent(lowerMsg, ['tashkilotlar', 'banklar', 'klinikalar', 'организации', 'organizations'])) {
+            return { text: this.getOrganizationsList(), action: null };
+        }
+
+        // 5. Services information
+        if (this.matchesIntent(lowerMsg, ['xizmatlar', 'services', 'услуги', 'qanday xizmat'])) {
+            return { text: this.getServicesInfo(), action: null };
+        }
+
+        // 6. User profile
+        if (this.matchesIntent(lowerMsg, ['mening', 'profil', 'profile', 'мои данные'])) {
+            return { text: this.getUserProfile(), action: null };
+        }
+
+        // 7. Help
+        if (this.matchesIntent(lowerMsg, ['yordam', 'help', 'помощь', 'qanday'])) {
+            return { text: this.getHelpMessage(), action: null };
+        }
+
+        // 8. Greeting
+        if (this.matchesIntent(lowerMsg, ['salom', 'hello', 'привет', 'assalomu alaykum', 'qoyaver'])) {
+            return { text: this.getGreeting(), action: null };
+        }
+
+        // 9. Thanks
+        if (this.matchesIntent(lowerMsg, ['rahmat', 'спасибо', 'thanks'])) {
+            return { text: this.getThanksResponse(), action: null };
+        }
+
+        // 10. Try OpenAI API if available
+        if (this.OPENAI_API_KEY && this.OPENAI_API_KEY.length > 20) {
+            try {
+                const aiResponse = await this.callOpenAI(message);
+                return { text: aiResponse, action: null };
+            } catch (error) {
+                console.log('OpenAI failed, using fallback');
+            }
+        }
+
+        // 11. Intelligent fallback
+        return { text: this.getIntelligentFallback(message), action: null };
+    },
+
+    /**
+     * Match message against intent keywords
+     */
+    matchesIntent(message, keywords) {
+        return keywords.some(keyword => message.includes(keyword.toLowerCase()));
+    },
+
+    /**
+     * Get system information
+     */
+    getSystemInfo() {
+        const lang = Language.getLanguage();
+
+        if (lang === 'uz') {
+            return `🚀 **Operator AI - O'zbekistonning birinchi aqlli navbat tizimi**\n\n` +
+                `📱 **Nima qila oladi:**\n` +
+                `• Online navbat olish - uydan chiqmasdan\n` +
+                `• Real-time kuzatuv - navbatingiz qayerda?\n` +
+                `• QR kod - tez va oson kirish\n` +
+                `• AI yordamchi - 24/7 yordam\n` +
+                `• 3 tilda - O'zbek, Rus, Ingliz\n\n` +
+                `🎯 **Maqsad:** Navbatlarni zamonaviy va qulay qilish!\n\n` +
+                `💡 **Afzalliklar:**\n` +
+                `✓ Vaqtni tejash\n` +
+                `✓ Stressni kamaytirish\n` +
+                `✓ Shaffoflik\n` +
+                `✓ Qulaylik`;
+        } else if (lang === 'ru') {
+            return `🚀 **Operator AI - первая умная система очередей Узбекистана**\n\n` +
+                `📱 **Что умеет:**\n` +
+                `• Онлайн запись - не выходя из дома\n` +
+                `• Отслеживание в реальном времени\n` +
+                `• QR код - быстрый доступ\n` +
+                `• AI помощник - помощь 24/7\n` +
+                `• 3 языка - Узбекский, Русский, Английский\n\n` +
+                `🎯 **Цель:** Сделать очереди современными и удобными!\n\n` +
+                `💡 **Преимущества:**\n` +
+                `✓ Экономия времени\n` +
+                `✓ Меньше стресса\n` +
+                `✓ Прозрачность\n` +
+                `✓ Удобство`;
+        } else {
+            return `🚀 **Operator AI - Uzbekistan's first intelligent queue system**\n\n` +
+                `📱 **Features:**\n` +
+                `• Online booking - from home\n` +
+                `• Real-time tracking\n` +
+                `• QR code - quick access\n` +
+                `• AI assistant - 24/7 help\n` +
+                `• 3 languages - Uzbek, Russian, English\n\n` +
+                `🎯 **Goal:** Make queues modern and convenient!\n\n` +
+                `💡 **Benefits:**\n` +
+                `✓ Save time\n` +
+                `✓ Less stress\n` +
+                `✓ Transparency\n` +
+                `✓ Convenience`;
+        }
+    },
+
+    /**
+     * Get organizations list with details
+     */
+    getOrganizationsList() {
+        const lang = Language.getLanguage();
+        const orgs = Database.getOrganizations();
+
+        let response = lang === 'uz' ? '🏢 **Bizning hamkor tashkilotlar:**\n\n' :
+            lang === 'ru' ? '🏢 **Наши партнерские организации:**\n\n' :
+                '🏢 **Our Partner Organizations:**\n\n';
+
+        orgs.forEach((org, index) => {
+            const branches = Database.getBranches(org.id);
+            const services = branches.reduce((acc, branch) => {
+                return acc + Database.getServices(branch.id).length;
+            }, 0);
+
+            response += `**${index + 1}. ${org.name}**\n`;
+            response += `   📍 ${branches.length} ${lang === 'uz' ? 'ta filial' : lang === 'ru' ? 'филиалов' : 'branches'}\n`;
+            response += `   🎯 ${services} ${lang === 'uz' ? 'ta xizmat' : lang === 'ru' ? 'услуг' : 'services'}\n`;
+            response += `   📞 ${org.phone || (lang === 'uz' ? 'Aloqa ma\'lumoti yo\'q' : lang === 'ru' ? 'Нет контакта' : 'No contact')}\n\n`;
+        });
+
+        response += lang === 'uz' ? '\n💡 Qaysi birida navbat olmoqchisiz?' :
+            lang === 'ru' ? '\n💡 В какой вы хотите записаться?' :
+                '\n💡 Which one would you like?';
+
+        return response;
+    },
+
+    /**
+     * Get services information
+     */
+    getServicesInfo() {
+        const lang = Language.getLanguage();
+        const services = Database.getServices();
+        const categories = {};
+
+        // Group by category
+        services.forEach(service => {
+            if (!categories[service.category]) {
+                categories[service.category] = [];
+            }
+            categories[service.category].push(service);
+        });
+
+        let response = lang === 'uz' ? '🎯 **Mavjud xizmatlar:**\n\n' :
+            lang === 'ru' ? '🎯 **Доступные услуги:**\n\n' :
+                '🎯 **Available Services:**\n\n';
+
+        Object.keys(categories).slice(0, 5).forEach(category => {
+            response += `**${category}:**\n`;
+            categories[category].slice(0, 3).forEach(service => {
+                response += `  • ${service.name}\n`;
+            });
+            response += '\n';
+        });
+
+        response += lang === 'uz' ? '💡 Qaysi xizmat kerak?' :
+            lang === 'ru' ? '💡 Какая услуга нужна?' :
+                '💡 Which service do you need?';
+
+        return response;
+    },
+
+    /**
+     * Get user profile
+     */
+    getUserProfile() {
+        const lang = Language.getLanguage();
+        const queues = Database.getQueues();
+        const activeQueues = queues.filter(q => q.status === 'waiting' || q.status === 'called');
+
+        let response = lang === 'uz' ? '👤 **Sizning profilingiz:**\n\n' :
+            lang === 'ru' ? '👤 **Ваш профиль:**\n\n' :
+                '👤 **Your Profile:**\n\n';
+
+        if (activeQueues.length > 0) {
+            response += lang === 'uz' ? `📋 **Aktiv navbatlar:** ${activeQueues.length} ta\n\n` :
+                lang === 'ru' ? `📋 **Активные очереди:** ${activeQueues.length}\n\n` :
+                    `📋 **Active Queues:** ${activeQueues.length}\n\n`;
+
+            activeQueues.slice(0, 3).forEach(queue => {
+                const service = Database.getService(queue.serviceId);
+                const branch = Database.getBranch(queue.branchId);
+                response += `🎫 **${queue.queueNumber}**\n`;
+                response += `   ${service.name} - ${branch.name}\n`;
+                response += `   ${lang === 'uz' ? 'Holat' : lang === 'ru' ? 'Статус' : 'Status'}: ${this.getStatusText(queue.status, lang)}\n\n`;
+            });
+        } else {
+            response += lang === 'uz' ? '📋 Hozircha aktiv navbatlaringiz yo\'q.\n\n' :
+                lang === 'ru' ? '📋 У вас пока нет активных очередей.\n\n' :
+                    '📋 You don\'t have any active queues yet.\n\n';
+        }
+
+        return response;
+    },
+
+    /**
+     * Get help message
+     */
+    getHelpMessage() {
+        const lang = Language.getLanguage();
+
+        if (lang === 'uz') {
+            return `🤝 **Men sizga qanday yordam bera olaman:**\n\n` +
+                `1️⃣ **Navbat olish** - "Navbat kerak" deb yozing\n` +
+                `2️⃣ **Holat tekshirish** - Navbat raqamingizni yozing (A-042)\n` +
+                `3️⃣ **Tashkilotlar** - "Qaysi tashkilotlar bor?"\n` +
+                `4️⃣ **Xizmatlar** - "Qanday xizmatlar mavjud?"\n` +
+                `5️⃣ **Tizim haqida** - "Operator AI nima?"\n` +
+                `6️⃣ **Profilim** - "Mening ma'lumotlarim"\n\n` +
+                `💡 **Maslahat:** Oddiy so'zlar bilan yozing, men tushunaman! 😊`;
+        } else if (lang === 'ru') {
+            return `🤝 **Как я могу помочь:**\n\n` +
+                `1️⃣ **Получить очередь** - напишите "Нужна очередь"\n` +
+                `2️⃣ **Проверить статус** - напишите номер (A-042)\n` +
+                `3️⃣ **Организации** - "Какие организации есть?"\n` +
+                `4️⃣ **Услуги** - "Какие услуги доступны?"\n` +
+                `5️⃣ **О системе** - "Что такое Operator AI?"\n` +
+                `6️⃣ **Мой профиль** - "Мои данные"\n\n` +
+                `💡 **Совет:** Пишите простыми словами, я пойму! 😊`;
+        } else {
+            return `🤝 **How I can help:**\n\n` +
+                `1️⃣ **Get queue** - write "Need queue"\n` +
+                `2️⃣ **Check status** - write your number (A-042)\n` +
+                `3️⃣ **Organizations** - "Which organizations?"\n` +
+                `4️⃣ **Services** - "What services available?"\n` +
+                `5️⃣ **About system** - "What is Operator AI?"\n` +
+                `6️⃣ **My profile** - "My information"\n\n` +
+                `💡 **Tip:** Write in simple words, I'll understand! 😊`;
+        }
+    },
+
+    /**
+     * Get greeting response
+     */
+    getGreeting() {
+        const lang = Language.getLanguage();
+        const greetings = {
+            uz: ['Assalomu alaykum! 😊', 'Salom! 👋', 'Xayrli kun! ☀️'],
+            ru: ['Здравствуйте! 😊', 'Привет! 👋', 'Добрый день! ☀️'],
+            en: ['Hello! 😊', 'Hi there! 👋', 'Good day! ☀️']
+        };
+
+        const randomGreeting = greetings[lang][Math.floor(Math.random() * greetings[lang].length)];
+
+        const followUp = lang === 'uz' ? 'Sizga qanday yordam bera olaman?' :
+            lang === 'ru' ? 'Чем могу помочь?' :
+                'How can I help you?';
+
+        return `${randomGreeting}\n\n${followUp}`;
+    },
+
+    /**
+     * Get thanks response
+     */
+    getThanksResponse() {
+        const lang = Language.getLanguage();
+
+        if (lang === 'uz') {
+            return 'Arzimaydi! 😊 Yana yordam kerak bo\'lsa, yozing. Xursand bo\'laman! 🤝';
+        } else if (lang === 'ru') {
+            return 'Пожалуйста! 😊 Если нужна помощь, пишите. Буду рад помочь! 🤝';
+        } else {
+            return 'You\'re welcome! 😊 Feel free to ask if you need more help. Happy to assist! 🤝';
+        }
+    },
+
+    /**
+     * Intelligent fallback for unknown queries
+     */
+    getIntelligentFallback(message) {
+        const lang = Language.getLanguage();
+
+        // Try to find related service
+        const services = Database.getServices();
+        const relatedService = services.find(s =>
+            message.toLowerCase().includes(s.name.toLowerCase()) ||
+            message.toLowerCase().includes(s.nameUz?.toLowerCase()) ||
+            message.toLowerCase().includes(s.nameRu?.toLowerCase())
+        );
+
+        if (relatedService) {
+            const branch = Database.getBranch(relatedService.branchId);
+            const org = Database.getOrganization(branch.organizationId);
+
+            if (lang === 'uz') {
+                return `Men "${relatedService.name}" xizmati haqida ma'lumot topdim! 🎯\n\n` +
+                    `📍 **Joylashuv:** ${org.name} - ${branch.name}\n` +
+                    `⏱ **Xizmat vaqti:** ~${relatedService.duration} daqiqa\n\n` +
+                    `Navbat olishni xohlaysizmi?`;
+            } else if (lang === 'ru') {
+                return `Я нашел информацию об услуге "${relatedService.nameRu || relatedService.name}"! 🎯\n\n` +
+                    `📍 **Расположение:** ${org.name} - ${branch.name}\n` +
+                    `⏱ **Время обслуживания:** ~${relatedService.duration} минут\n\n` +
+                    `Хотите записаться?`;
+            } else {
+                return `I found information about "${relatedService.nameEn || relatedService.name}"! 🎯\n\n` +
+                    `📍 **Location:** ${org.name} - ${branch.name}\n` +
+                    `⏱ **Service time:** ~${relatedService.duration} minutes\n\n` +
+                    `Would you like to get a queue?`;
+            }
+        }
+
+        // Generic helpful response
+        if (lang === 'uz') {
+            return `Kechirasiz, men bu savolni to'liq tushunmadim. 🤔\n\n` +
+                `Lekin sizga yordam bera olaman:\n` +
+                `• "Navbat kerak" - navbat olish\n` +
+                `• "Tashkilotlar" - ro'yxat\n` +
+                `• "Yordam" - barcha imkoniyatlar\n\n` +
+                `Qaysi birini tanlaysiz?`;
+        } else if (lang === 'ru') {
+            return `Извините, я не совсем понял ваш вопрос. 🤔\n\n` +
+                `Но я могу помочь с:\n` +
+                `• "Нужна очередь" - записаться\n` +
+                `• "Организации" - список\n` +
+                `• "Помощь" - все возможности\n\n` +
+                `Что выберете?`;
+        } else {
+            return `Sorry, I didn't quite understand your question. 🤔\n\n` +
+                `But I can help with:\n` +
+                `• "Need queue" - get a number\n` +
+                `• "Organizations" - list\n` +
+                `• "Help" - all features\n\n` +
+                `Which one?`;
+        }
+    },
+
+    /**
+     * Get queue status
+     */
+    getQueueStatus(queueNumber) {
+        const queue = Database.getQueueByNumber(queueNumber);
+        const lang = Language.getLanguage();
+
+        if (!queue) {
+            return lang === 'uz' ? `Navbat raqami ${queueNumber} topilmadi. 😕\n\nIltimos, raqamni tekshiring.` :
+                lang === 'ru' ? `Номер очереди ${queueNumber} не найден. 😕\n\nПожалуйста, проверьте номер.` :
+                    `Queue number ${queueNumber} not found. 😕\n\nPlease check the number.`;
+        }
+
+        const branch = Database.getBranch(queue.branchId);
+        const service = Database.getService(queue.serviceId);
+        const staff = queue.staffId ? Database.getStaffMember(queue.staffId) : null;
+        const position = QueueManager.getQueuePosition(queue.id);
+
+        let response = `📋 **${queueNumber}**\n\n`;
+        response += `🏢 ${branch.name}\n`;
+        response += `🎯 ${service.name}\n`;
+        response += `📊 ${this.getStatusText(queue.status, lang)}\n\n`;
+
+        if (queue.status === 'waiting' && position) {
+            response += lang === 'uz' ? `👥 Sizdan oldin: ${position.position - 1} kishi\n⏱ Taxminiy kutish: ${position.estimatedWaitTime} daqiqa` :
+                lang === 'ru' ? `👥 Перед вами: ${position.position - 1} человек\n⏱ Примерное ожидание: ${position.estimatedWaitTime} минут` :
+                    `👥 People ahead: ${position.position - 1}\n⏱ Estimated wait: ${position.estimatedWaitTime} minutes`;
+        } else if (queue.status === 'called' || queue.status === 'serving') {
+            response += lang === 'uz' ? `🎯 ${staff?.counter || 'Counter'}ga tashrif buyuring!` :
+                lang === 'ru' ? `🎯 Пройдите к ${staff?.counter || 'Counter'}!` :
+                    `🎯 Please proceed to ${staff?.counter || 'Counter'}!`;
+        }
+
+        return response;
+    },
+
+    /**
+     * Get status text in language
+     */
+    getStatusText(status, lang) {
+        const texts = {
+            waiting: { uz: 'Kutmoqda ⏳', ru: 'Ожидание ⏳', en: 'Waiting ⏳' },
+            called: { uz: 'Chaqirildi 🔔', ru: 'Вызван 🔔', en: 'Called 🔔' },
+            serving: { uz: 'Xizmat ko\'rsatilmoqda ⚡', ru: 'Обслуживается ⚡', en: 'Serving ⚡' },
+            completed: { uz: 'Bajarildi ✅', ru: 'Выполнено ✅', en: 'Completed ✅' },
+            cancelled: { uz: 'Bekor qilindi ❌', ru: 'Отменено ❌', en: 'Cancelled ❌' },
+            'no-show': { uz: 'Kelmadi 🚫', ru: 'Не пришел 🚫', en: 'No Show 🚫' }
+        };
+        return texts[status]?.[lang] || status;
+    },
+
+    /**
+     * Get error message
+     */
+    getErrorMessage() {
+        const lang = Language.getLanguage();
+        return lang === 'uz' ? 'Kechirasiz, xatolik yuz berdi. 😔\n\nIltimos, qayta urinib ko\'ring.' :
+            lang === 'ru' ? 'Извините, произошла ошибка. 😔\n\nПожалуйста, попробуйте снова.' :
+                'Sorry, an error occurred. 😔\n\nPlease try again.';
+    },
+
+    /**
+     * Call OpenAI API
+     */
+    async callOpenAI(userMessage) {
+        const context = this.buildAIContext();
+        const messages = [
+            { role: 'system', content: context },
+            ...this.conversationContext.slice(-5),
+            { role: 'user', content: userMessage }
+        ];
+
+        const response = await fetch(this.OPENAI_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: this.OPENAI_MODEL,
+                messages: messages,
+                temperature: 0.7,
+                max_tokens: 500
+            })
+        });
+
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+        const data = await response.json();
+        const aiResponse = data.choices[0].message.content;
+
+        // Store in conversation context
+        this.conversationContext.push(
+            { role: 'user', content: userMessage },
+            { role: 'assistant', content: aiResponse }
+        );
+
+        return aiResponse;
+    },
+
+    /**
+     * Build AI context
+     */
+    buildAIContext() {
+        const lang = Language.getLanguage();
+        const orgs = Database.getOrganizations();
+        const services = Database.getServices();
+
+        return `You are Operator AI, Uzbekistan's first intelligent queue management assistant. You are friendly, helpful, and professional.
+
+PERSONALITY:
+- Warm and conversational (like a helpful friend)
+- Use emojis naturally 😊
+- Keep responses SHORT (2-3 sentences max)
+- Always reply in ${lang} language
+- Be enthusiastic about helping!
+
+YOUR ROLE:
+Help users with the queue system in Uzbekistan. This is a NEW system - the first of its kind in the country!
+
+AVAILABLE ORGANIZATIONS:
+${orgs.map(o => `- ${o.name} (${o.type})`).join('\n')}
+
+SERVICES (first 10):
+${services.slice(0, 10).map(s => `- ${s.name}`).join('\n')}
+
+RULES:
+1. Focus ONLY on queue management topics
+2. If asked off-topic questions, politely redirect to queue services
+3. If user wants a queue, tell them to use the button
+4. If user asks status, ask for their ticket number (A-042 format)
+5. Be helpful and encouraging!
+
+Remember: You're making queues easier for people in Uzbekistan! 🇺🇿`;
+    },
+
+    /**
+     * Add message to chat
+     */
+    addMessage(sender, text) {
+        const container = document.getElementById('chat-messages');
+        const div = document.createElement('div');
+        div.className = `chat-message ${sender}-message`;
+
+        const time = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+
+        div.innerHTML = `
+            <div class="message-content">${Utils.sanitizeHTML(text).replace(/\n/g, '<br>')}</div>
+            <div class="message-time">${time}</div>
+        `;
+
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+
+        this.messages.push({ sender, text, time: new Date().toISOString() });
+        this.saveChatHistory();
+
+        if (!this.isOpen && sender === 'bot') {
+            document.getElementById('chat-badge').style.display = 'flex';
+        }
+    },
+
+    /**
+     * Add queue button
+     */
+    addQueueButton() {
+        const container = document.getElementById('chat-messages');
+        const div = document.createElement('div');
+        div.className = 'chat-message bot-message';
+
+        const lang = Language.getLanguage();
+        const text = lang === 'uz' ? '🎫 Navbat olish' :
+            lang === 'ru' ? '🎫 Получить номер' :
+                '🎫 Get Queue Number';
+
+        div.innerHTML = `
+            <div class="message-content">
+                <button 
+                    onclick="window.location.href='queue.html'" 
+                    style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        width: 100%;
+                        transition: all 0.3s;
+                    "
+                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)'"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
+                >
+                    ${text}
+                </button>
+            </div>
+        `;
+
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    },
+
+    showTypingIndicator() {
+        this.isTyping = true;
+        const container = document.getElementById('chat-messages');
+        const div = document.createElement('div');
+        div.id = 'typing-indicator';
+        div.className = 'chat-message bot-message typing';
+        div.innerHTML = `
+            <div class="message-content">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+        `;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    },
+
+    hideTypingIndicator() {
+        this.isTyping = false;
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) indicator.remove();
+    },
+
+    saveChatHistory() {
+        localStorage.setItem('operatorai_chat_history', JSON.stringify(this.messages));
+    },
+
+    loadChatHistory() {
+        const history = localStorage.getItem('operatorai_chat_history');
+        if (history) {
+            try {
+                this.messages = JSON.parse(history);
+                const recent = this.messages.slice(-10);
+                recent.forEach(msg => {
+                    const container = document.getElementById('chat-messages');
+                    if (container) {
+                        const div = document.createElement('div');
+                        div.className = `chat-message ${msg.sender}-message`;
+                        const time = new Date(msg.time).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+                        div.innerHTML = `
+                            <div class="message-content">${Utils.sanitizeHTML(msg.text).replace(/\n/g, '<br>')}</div>
+                            <div class="message-time">${time}</div>
+                        `;
+                        container.appendChild(div);
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading chat history:', error);
+            }
+        }
+    },
+
+    clearHistory() {
+        this.messages = [];
+        this.conversationContext = [];
+        localStorage.removeItem('operatorai_chat_history');
+        const container = document.getElementById('chat-messages');
+        if (container) container.innerHTML = '';
+        this.addMessage('bot', this.getWelcomeMessage());
+    }
+};
+
+// Initialize on DOM ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => AIChatbot.init());
+} else {
+    AIChatbot.init();
+}
+
+// Export
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = AIChatbot;
+}

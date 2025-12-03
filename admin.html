@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Operator AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">⚡</span>
+                    <span class="logo-text">Operator AI</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-tab="overview">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text" data-i18n="overview">Umumiy ko'rinish</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="analytics">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-text" data-i18n="analytics">Tahlillar</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="organizations">
+                    <span class="nav-icon">🏢</span>
+                    <span class="nav-text" data-i18n="organizations">Tashkilotlar</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="staff">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-text" data-i18n="staff">Xodimlar</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-text" data-i18n="settings">Sozlamalar</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">AD</div>
+                    <div class="user-details">
+                        <span class="user-name">Admin User</span>
+                        <span class="user-role">Super Admin</span>
+                    </div>
+                </div>
+                <button class="logout-btn" id="logout-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h1 class="page-title" id="page-title">Umumiy ko'rinish</h1>
+                <div class="top-bar-actions">
+                    <div class="language-selector">
+                        <button class="lang-btn active" data-lang="uz">UZ</button>
+                        <button class="lang-btn" data-lang="ru">RU</button>
+                        <button class="lang-btn" data-lang="en">EN</button>
+                    </div>
+                    <button class="theme-toggle" id="theme-toggle">
+                        <span class="icon">🌙</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-area" id="content-area">
+                <!-- Overview Tab -->
+                <div class="tab-content active" id="overview-tab">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon purple">👥</div>
+                            <div class="stat-info">
+                                <span class="stat-label" data-i18n="total_visitors">Jami tashrifchilar</span>
+                                <span class="stat-value" id="total-visitors">0</span>
+                                <span class="stat-trend positive">↑ 12%</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon blue">⏳</div>
+                            <div class="stat-info">
+                                <span class="stat-label" data-i18n="avg_wait_time">O'rtacha kutish</span>
+                                <span class="stat-value" id="avg-wait-time">0 min</span>
+                                <span class="stat-trend negative">↓ 5%</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon green">✅</div>
+                            <div class="stat-info">
+                                <span class="stat-label" data-i18n="completed_services">Bajarilgan</span>
+                                <span class="stat-value" id="completed-services">0</span>
+                                <span class="stat-trend positive">↑ 8%</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon orange">⭐</div>
+                            <div class="stat-info">
+                                <span class="stat-label" data-i18n="satisfaction">Qoniqish darajasi</span>
+                                <span class="stat-value" id="satisfaction-rate">4.8</span>
+                                <span class="stat-trend positive">↑ 0.2</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="charts-row">
+                        <div class="chart-card large">
+                            <h3 class="chart-title" data-i18n="visitors_analytics">Tashrifchilar statistikasi</h3>
+                            <div class="chart-container" id="visitors-chart">
+                                <div class="chart-placeholder">Chart Area</div>
+                            </div>
+                        </div>
+                        <div class="chart-card small">
+                            <h3 class="chart-title" data-i18n="service_distribution">Xizmatlar taqsimoti</h3>
+                            <div class="chart-container" id="services-chart">
+                                <div class="chart-placeholder">Pie Chart Area</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="recent-activity">
+                        <h3 class="section-title" data-i18n="recent_activity">So'nggi faoliyat</h3>
+                        <div class="activity-list" id="activity-list">
+                            <!-- Activity items will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Tab -->
+                <div class="tab-content" id="analytics-tab">
+                    <div class="content-header">
+                        <h2 data-i18n="analytics">Tahlillar</h2>
+                        <div class="date-range-picker">
+                            <select id="analytics-period" class="form-select">
+                                <option value="today">Bugun</option>
+                                <option value="week" selected>Bu hafta</option>
+                                <option value="month">Bu oy</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon purple">📅</div>
+                            <div class="stat-info">
+                                <span class="stat-label">Jami bronlar</span>
+                                <span class="stat-value" id="analytics-total-bookings">0</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon blue">👥</div>
+                            <div class="stat-info">
+                                <span class="stat-label">Yangi foydalanuvchilar</span>
+                                <span class="stat-value" id="analytics-new-users">0</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon green">✅</div>
+                            <div class="stat-info">
+                                <span class="stat-label">Yakunlangan</span>
+                                <span class="stat-value" id="analytics-completed">0</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon red">❌</div>
+                            <div class="stat-info">
+                                <span class="stat-label">Bekor qilingan</span>
+                                <span class="stat-value" id="analytics-cancelled">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="charts-row">
+                        <div class="chart-card large">
+                            <h3 class="chart-title">Bronlar dinamikasi</h3>
+                            <div class="chart-container" id="bookings-chart">
+                                <!-- CSS Chart will be inserted here -->
+                            </div>
+                        </div>
+                        <div class="chart-card small">
+                            <h3 class="chart-title">Eng mashhur xizmatlar</h3>
+                            <div class="chart-container" id="services-analytics-chart">
+                                <!-- Pie Chart will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Organizations Tab -->
+                <div class="tab-content" id="organizations-tab">
+                    <div class="content-header">
+                        <h2 data-i18n="organizations">Tashkilotlar</h2>
+                        <button class="btn-primary" id="add-org-btn">
+                            <span>+</span> <span data-i18n="add_organization">Qo'shish</span>
+                        </button>
+                    </div>
+                    <div class="org-grid" id="org-grid">
+                        <!-- Organizations will be populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Staff Tab -->
+                <div class="tab-content" id="staff-tab">
+                    <div class="content-header">
+                        <h2 data-i18n="staff">Xodimlar</h2>
+                        <button class="btn-primary" id="add-staff-btn">
+                            <span>+</span> <span data-i18n="add_staff">Qo'shish</span>
+                        </button>
+                    </div>
+                    <div class="staff-list" id="staff-list">
+                        <!-- Staff list will be populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div class="tab-content" id="settings-tab">
+                    <div class="content-header">
+                        <h2 data-i18n="system_settings">Tizim sozlamalari</h2>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Foydalanuvchilar boshqaruvi</h3>
+                        <div class="table-container">
+                            <table class="data-table" id="users-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Telefon / Telegram</th>
+                                        <th>Ro'yxatdan o'tgan</th>
+                                        <th>Oxirgi kirish</th>
+                                        <th>Amallar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-list">
+                                    <!-- Users will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="settings-form" style="margin-top: 2rem;">
+                        <h3>Boshqa sozlamalar</h3>
+                        <div class="form-group">
+                            <label>Ish vaqti</label>
+                            <input type="text" class="form-input" value="09:00 - 18:00" readonly>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/language.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+
+</html>
