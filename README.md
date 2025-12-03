@@ -1,4 +1,4 @@
-# Operator AI - Queue Management System
+# Operator AI - Queue Management System This is for education and this solve for hackathon it isn't Uzbekistan's system
 
 🤖 **O'zbekistondagi eng zamonaviy navbat boshqaruv tizimi**
 

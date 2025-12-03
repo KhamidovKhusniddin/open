@@ -756,58 +756,13 @@ a:hover {
     padding: var(--spacing-lg);
 }
 
-.p-xl {
-    padding: var(--spacing-xl);
+transform: translateY(20px);
 }
 
-.hidden {
-    display: none !important;
+to {
+    opacity: 1;
+    transform: translateY(0);
 }
-
-.visible {
-    display: block !important;
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-    :root {
-        --text-5xl: 2.25rem;
-        --text-4xl: 1.875rem;
-        --text-3xl: 1.5rem;
-    }
-
-    .container {
-        padding: 0 var(--spacing-md);
-    }
-
-    .toast {
-        right: var(--spacing-md);
-        left: var(--spacing-md);
-        min-width: auto;
-    }
-}
-
-/* ===== ANIMATIONS ===== */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes slideInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 @keyframes slideInDown {
