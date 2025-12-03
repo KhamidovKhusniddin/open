@@ -5,6 +5,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const navToggle = document.getElementById('nav-toggle');
     const navMenu = document.getElementById('nav-menu');
 
+    // Update stats with real data from Database
+    const updateStats = () => {
+        try {
+            const stats = Database.getStatistics();
+            const branches = Database.getBranches();
+            const statNumbers = document.querySelectorAll('.stat-number');
+
+            if (statNumbers.length >= 3) {
+                // Total Queues
+                statNumbers[0].dataset.count = stats.total || 0;
+
+                // Branches
+                statNumbers[1].dataset.count = branches.length || 0;
+
+                // Satisfaction (using completion rate as proxy or keeping high for demo)
+                // If completion rate is 0 (no data), fallback to 98 for demo purposes
+                statNumbers[2].dataset.count = stats.completionRate > 0 ? stats.completionRate : 98;
+            }
+        } catch (error) {
+            console.error('Error updating stats:', error);
+        }
+    };
+
+    updateStats();
+
     if (navToggle) {
         navToggle.addEventListener('click', () => {
             navToggle.classList.toggle('active');
