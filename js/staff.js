@@ -35,11 +35,15 @@ const StaffApp = {
     if (logoutBtn) {
       logoutBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        if (confirm('Tizimdan chiqmoqchimisiz?')) {
-          sessionStorage.removeItem('staff_auth');
-          window.location.href = 'staff-login.html';
-        }
+        this.logout();
       });
+    }
+  },
+
+  logout() {
+    if (confirm('Tizimdan chiqmoqchimisiz?')) {
+      sessionStorage.removeItem('staff_auth');
+      window.location.href = 'staff-login.html';
     }
   },
 
