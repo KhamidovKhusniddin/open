@@ -41,5 +41,6 @@ notes.txt
 TODO.md
 
 # Admin credentials (keep private!)
-js/admin-config.js
+# Temporarily commented out for Netlify deployment
+# js/admin-config.js
 
