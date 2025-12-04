@@ -1,9 +1,12 @@
-// Simplified AI Chatbot with OpenAI Integration
+// Simplified AI Chatbot with Hugging Face Integration
 const AIChatbot = {
-    // OpenAI Configuration
-    OPENAI_API_KEY: 'sk-ijklmnop5678efghijklmnop5678efghijklmnop',
-    OPENAI_API_URL: 'https://api.openai.com/v1/chat/completions',
-    OPENAI_MODEL: 'gpt-3.5-turbo',
+    // Hugging Face Configuration (BEPUL!)
+    HF_API_KEY: 'hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', // Hugging Face API key
+    HF_API_URL: 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
+    // Alternative models:
+    // 'meta-llama/Llama-2-7b-chat-hf'
+    // 'google/flan-t5-large'
+    // 'tiiuae/falcon-7b-instruct'
 
     isOpen: false,
     messages: [],
@@ -196,7 +199,9 @@ const AIChatbot = {
 Siz do'stona, professional va foydali javoblar berasiz. 
 Foydalanuvchilarga navbat olish, tashkilotlar va xizmatlar haqida ma'lumot berasiz.
 Har doim qisqa va aniq javob bering (2-3 jumla).
-O'zbek tilida javob bering.`;
+O'zbek tilida javob bering.
+Iloji boricha togri javob bering
+To'gri javob bering  `;
 
         // Add to conversation history
         this.conversationHistory.push({
@@ -232,6 +237,112 @@ O'zbek tilida javob bering.`;
         const aiResponse = data.choices[0].message.content;
 
         // Add AI response to history
+        const response = await this.callOpenAI(message);
+        this.hideTypingIndicator();
+        this.addMessage('bot', response);
+    } catch(error) {
+        console.error('OpenAI Error:', error);
+        this.hideTypingIndicator();
+        // Fallback response
+        this.addMessage('bot', 'Kechirasiz, xatolik yuz berdi. Navbat olish uchun "Boshlash" tugmasini bosing.');
+    }
+},
+
+    async callOpenAI(userMessage) {
+        // Build conversation prompt for Hugging Face
+        const systemPrompt = `Siz OPERATOR AI - O'zbekistonning birinchi sun'iy intellekt asosidagi navbat boshqaruv yordamchisisiz.
+
+KIM SIZIZ:
+- Nomi: Operator AI
+- Vazifa: Navbat tizimida foydalanuvchilarga yordam berish
+- Til: O'zbek tili (asosiy), Rus va Ingliz tillarida ham gaplasha olasiz
+- Xususiyat: Do'stona, professional, samarali
+
+NIMA QILA OLASIZ:
+1. Navbat olishda yordam berish
+2. Tashkilotlar va filiallar haqida ma'lumot berish
+3. Xizmatlar ro'yxati va tavsifini ko'rsatish
+4. Navbat holati va kutish vaqti haqida ma'lumot berish
+5. Kerakli hujjatlar ro'yxatini aytish
+6. Ish vaqtlari va manzillar haqida ma'lumot berish
+7. Tizimdan foydalanish bo'yicha yo'riqnoma berish
+
+QANDAY JAVOB BERASIZ:
+- Qisqa va aniq (2-3 jumla)
+- Do'stona va samimiy ohangda
+- Emoji ishlatib, qiziqarli qiling 😊
+- Har doim yordam taklif qiling
+- Agar bilmasangiz, halol aytib, boshqa yo'l ko'rsating
+
+MUHIM QOIDALAR:
+- Faqat navbat tizimi bilan bog'liq savollarga javob bering
+- Agar savol boshqa mavzuda bo'lsa, iltimos bilan navbat tizimiga qaytaring
+- Hech qachon yolg'on ma'lumot bermang
+- Agar aniq javob bilmasangiz, "Aniq ma'lumot yo'q" deb aytib, qo'llab-quvvatlash xizmatiga murojaat qilishni tavsiya qiling
+
+MISOL JAVOBLAR:
+Savol: "Salom, kim siz?"
+Javob: "Salom! 👋 Men Operator AI - navbat tizimining yordamchisiman. Sizga navbat olish, tashkilotlar va xizmatlar haqida ma'lumot berishda yordam bera olaman. Nima kerak?"
+
+Savol: "Qanday xizmatlar bor?"
+Javob: "Bizda klinikalar, banklar, soliq xizmatlari va pasport bo'limlari mavjud. 🏥🏦 Qaysi birida navbat olmoqchisiz?"
+
+Endi foydalanuvchi savoliga javob bering:`;
+
+        // Build conversation history
+        let conversationText = systemPrompt + '\n\n';
+
+        // Add last 5 messages for context
+        const recentMessages = this.conversationHistory.slice(-5);
+        recentMessages.forEach(msg => {
+            conversationText += `${msg.role === 'user' ? 'Foydalanuvchi' : 'Operator AI'}: ${msg.content}\n`;
+        });
+
+        conversationText += `Foydalanuvchi: ${userMessage}\nOperator AI:`;
+
+        // Add to conversation history
+        this.conversationHistory.push({
+            role: 'user',
+            content: userMessage
+        });
+
+        const response = await fetch(this.HF_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.HF_API_KEY}`
+            },
+            body: JSON.stringify({
+                inputs: conversationText,
+                parameters: {
+                    max_new_tokens: 150,
+                    temperature: 0.7,
+                    top_p: 0.9,
+                    return_full_text: false
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Hugging Face API error: ${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        let aiResponse = '';
+
+        if (Array.isArray(data) && data[0]?.generated_text) {
+            aiResponse = data[0].generated_text.trim();
+        } else if (data.generated_text) {
+            aiResponse = data.generated_text.trim();
+        } else {
+            throw new Error('Unexpected response format from Hugging Face');
+        }
+
+        // Clean up response
+        aiResponse = aiResponse.replace(/^Operator AI:\s*/i, '').trim();
+
+        // Add AI response to history
         this.conversationHistory.push({
             role: 'assistant',
             content: aiResponse
@@ -240,44 +351,44 @@ O'zbek tilida javob bering.`;
         return aiResponse;
     },
 
-    showTypingIndicator() {
-        const container = document.getElementById('chat-messages');
-        const div = document.createElement('div');
-        div.id = 'typing-indicator';
-        div.className = 'chat-message bot-message';
-        div.innerHTML = `
+        showTypingIndicator() {
+    const container = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.id = 'typing-indicator';
+    div.className = 'chat-message bot-message';
+    div.innerHTML = `
             <div class="message-content">
                 <span class="typing-dot"></span>
                 <span class="typing-dot"></span>
                 <span class="typing-dot"></span>
             </div>
         `;
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
-    },
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+},
 
-    hideTypingIndicator() {
-        const indicator = document.getElementById('typing-indicator');
-        if (indicator) indicator.remove();
-    },
+hideTypingIndicator() {
+    const indicator = document.getElementById('typing-indicator');
+    if (indicator) indicator.remove();
+},
 
-    addMessage(sender, text) {
-        const container = document.getElementById('chat-messages');
-        const div = document.createElement('div');
-        div.className = `chat-message ${sender}-message`;
+addMessage(sender, text) {
+    const container = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = `chat-message ${sender}-message`;
 
-        const time = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+    const time = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
 
-        div.innerHTML = `
+    div.innerHTML = `
             <div class="message-content">${text.replace(/\n/g, '<br>')}</div>
             <div class="message-time">${time}</div>
         `;
 
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
 
-        this.messages.push({ sender, text, time: new Date().toISOString() });
-    }
+    this.messages.push({ sender, text, time: new Date().toISOString() });
+}
 };
 
 // Initialize on DOM ready
