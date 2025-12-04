@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update stats with real data from Database
     const updateStats = () => {
         try {
-            const stats = Database.getStatistics();
+            const stats = Database.getStatistics(null, new Date(), false);
             const branches = Database.getBranches();
             const statNumbers = document.querySelectorAll('.stat-number');
 

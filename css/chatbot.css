@@ -2,9 +2,9 @@
 
 .ai-chatbot {
     position: fixed;
-    bottom: var(--spacing-xl);
+    bottom: 100px;
     right: var(--spacing-xl);
-    z-index: var(--z-modal);
+    z-index: 9999;
 }
 
 .chat-toggle {
@@ -223,5 +223,34 @@
         width: calc(100vw - 2 * var(--spacing-md));
         height: calc(100vh - 120px);
         max-width: 100%;
+    }
+}
+/* Typing indicator animation */
+.typing-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--primary-dark);
+    margin: 0 2px;
+    animation: typing 1.4s infinite;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.7;
+    }
+    30% {
+        transform: translateY(-10px);
+        opacity: 1;
     }
 }

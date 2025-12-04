@@ -387,12 +387,14 @@ const Database = {
     /**
      * Get queue statistics
      */
-    getStatistics(branchId = null, date = new Date()) {
+    getStatistics(branchId = null, date = new Date(), filterByDate = true) {
         const filterDate = new Date(date).toDateString();
         let queues = this.getQueues();
 
-        // Filter by date
-        queues = queues.filter(q => new Date(q.createdAt).toDateString() === filterDate);
+        // Filter by date if enabled
+        if (filterByDate) {
+            queues = queues.filter(q => new Date(q.createdAt).toDateString() === filterDate);
+        }
 
         // Filter by branch if specified
         if (branchId) {
