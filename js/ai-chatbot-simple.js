@@ -1,8 +1,8 @@
-// Simplified AI Chatbot with Hugging Face Integration
+// Simplified AI Chatbot with Google Gemini Integration
 const AIChatbot = {
-    // Hugging Face Configuration (BEPUL!)
-    HF_API_KEY: 'hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', // Hugging Face API key
-    HF_API_URL: 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
+    // Google Gemini Configuration (BEPUL!)
+    GEMINI_API_KEY: 'AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', // Google Gemini API key
+    GEMINI_API_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
 
     isOpen: false,
     messages: [],
@@ -168,13 +168,29 @@ const AIChatbot = {
         this.showTypingIndicator();
 
         try {
+            console.log('🔄 Sending message to Hugging Face...');
             const response = await this.callHuggingFace(message);
+            console.log('✅ Response received:', response);
             this.hideTypingIndicator();
             this.addMessage('bot', response);
         } catch (error) {
-            console.error('Hugging Face Error:', error);
+            console.error('❌ Hugging Face Error:', error);
+            console.error('Error details:', error.message);
             this.hideTypingIndicator();
-            this.addMessage('bot', 'Kechirasiz, xatolik yuz berdi. Navbat olish uchun "Boshlash" tugmasini bosing.');
+
+            // Show detailed error
+            let errorMsg = 'Kechirasiz, xatolik yuz berdi.\n\n';
+            if (error.message.includes('503')) {
+                errorMsg += '⏳ Model yuklanmoqda. 20 soniya kutib qayta urinib ko\'ring.';
+            } else if (error.message.includes('401') || error.message.includes('403')) {
+                errorMsg += '🔑 API key noto\'g\'ri. Iltimos, to\'g\'ri key kiriting.';
+            } else if (error.message.includes('Failed to fetch')) {
+                errorMsg += '🌐 Internet aloqasi yo\'q. Internetni tekshiring.';
+            } else {
+                errorMsg += `Xatolik: ${error.message}\n\nNavbat olish uchun "Boshlash" tugmasini bosing.`;
+            }
+
+            this.addMessage('bot', errorMsg);
         }
     },
 
