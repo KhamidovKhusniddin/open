@@ -37,9 +37,18 @@ def init_db():
             phone TEXT PRIMARY KEY,
             user_id TEXT,
             username TEXT,
+            role TEXT DEFAULT 'user',
+            password_hash TEXT,
             created_at TEXT
         )
     ''')
+    
+    # Check if role column exists (simple migration helper)
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN role TEXT DEFAULT "user"')
+        c.execute('ALTER TABLE users ADD COLUMN password_hash TEXT')
+    except:
+        pass # Already exists
 
     # services table
     c.execute('''
@@ -48,7 +57,8 @@ def init_db():
             name_uz TEXT,
             name_ru TEXT,
             name_en TEXT,
-            branch_id TEXT
+            branch_id TEXT,
+            estimated_duration INTEGER DEFAULT 15
         )
     ''')
 
@@ -62,12 +72,16 @@ def add_queue(queue_data):
     conn = get_db_connection()
     c = conn.cursor()
     try:
+        # Generate internal ID if not provided as UUID compatible
+        import uuid
+        internal_id = queue_data.get('id') or str(uuid.uuid4())
+        
         c.execute('''
             INSERT INTO queues (id, phone, number, status, date, time, staff_id, service_id, branch_id, created_at, last_notified, notification_level)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
-            queue_data['id'],
-            queue_data['phone'],
+            internal_id,
+            normalize_phone(queue_data['phone']),
             queue_data['number'],
             queue_data.get('status', 'waiting'),
             queue_data.get('date'),
@@ -96,6 +110,7 @@ def get_queue(queue_id):
     return None
 
 def get_queues_by_phone(phone, date=None):
+    phone = normalize_phone(phone)
     conn = get_db_connection()
     query = 'SELECT * FROM queues WHERE phone = ?'
     params = [phone]
@@ -112,19 +127,18 @@ def get_todays_queues():
     conn = get_db_connection()
     queues = conn.execute('SELECT * FROM queues WHERE date = ? OR status = "waiting"', (today,)).fetchall()
     conn.close()
-    # Return as dict for compatibility with old code logic if needed, or list
     return {q['id']: dict(q) for q in queues} 
 
 def get_all_queues_list():
     conn = get_db_connection()
-    queues = conn.execute('SELECT * FROM queues').fetchall()
+    queues = conn.execute('SELECT * FROM queues ORDER BY created_at DESC').fetchall()
     conn.close()
     return [dict(q) for q in queues]
 
 def update_queue_status(queue_id, status):
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute('UPDATE queues SET status = ? WHERE id = ?', (status, queue_id))
+    c.execute('UPDATE queues SET status = ?, last_notified = ? WHERE id = ?', (status, datetime.now().isoformat(), queue_id))
     conn.commit()
     conn.close()
 
@@ -137,14 +151,30 @@ def update_notification_level(queue_id, level):
 
 # --- User Operations ---
 
-def add_user(phone, user_id, username):
-    # Normalize phone: plus sign + digits only
-    phone = "+" + "".join(filter(str.isdigit, phone))
+def normalize_phone(phone):
+    """Ensure phone is in +998XXXXXXXXX format or consistent +..."""
+    digits = "".join(filter(str.isdigit, phone))
+    if not phone.startswith('+'):
+        # Assume UZ if it's 9 digits or starts with 998
+        if len(digits) == 9:
+            return "+998" + digits
+        return "+" + digits
+    return "+" + digits
+
+def add_user(phone, user_id, username, role='user', password_hash=None):
+    phone = normalize_phone(phone)
     conn = get_db_connection()
     c = conn.cursor()
     try:
-        c.execute('INSERT OR REPLACE INTO users (phone, user_id, username, created_at) VALUES (?, ?, ?, ?)',
-                  (phone, user_id, username, datetime.now().isoformat()))
+        c.execute('''
+            INSERT INTO users (phone, user_id, username, role, password_hash, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(phone) DO UPDATE SET 
+                user_id=excluded.user_id, 
+                username=excluded.username, 
+                role=COALESCE(excluded.role, users.role),
+                password_hash=COALESCE(excluded.password_hash, users.password_hash)
+        ''', (phone, user_id, username, role, password_hash, datetime.now().isoformat()))
         conn.commit()
     except Exception as e:
         print(f"Error adding user: {e}")
@@ -152,9 +182,16 @@ def add_user(phone, user_id, username):
         conn.close()
 
 def get_user(phone):
-    phone = "+" + "".join(filter(str.isdigit, phone))
+    phone = normalize_phone(phone)
     conn = get_db_connection()
     user = conn.execute('SELECT * FROM users WHERE phone = ?', (phone,)).fetchone()
+    conn.close()
+    return dict(user) if user else None
+
+def get_admin_user(phone):
+    phone = normalize_phone(phone)
+    conn = get_db_connection()
+    user = conn.execute('SELECT * FROM users WHERE phone = ? AND role = "admin"', (phone,)).fetchone()
     conn.close()
     return dict(user) if user else None
 
@@ -162,20 +199,13 @@ def get_user(phone):
 
 def get_admin_stats():
     conn = get_db_connection()
-    
-    # Total Queues Today
     today = datetime.now().strftime('%Y-%m-%d')
-    total_today = conn.execute('SELECT COUNT(*) FROM queues WHERE date = ?', (today,)).fetchone()[0]
     
-    # Waiting
-    waiting = conn.execute('SELECT COUNT(*) FROM queues WHERE status = "waiting" AND date = ?', (today,)).fetchone()[0]
-    
-    # Completed
-    completed = conn.execute('SELECT COUNT(*) FROM queues WHERE status = "completed" AND date = ?', (today,)).fetchone()[0]
-    
-    conn.close()
-    return {
-        "total_today": total_today,
-        "waiting": waiting,
-        "completed": completed
+    stats = {
+        "total_today": conn.execute('SELECT COUNT(*) FROM queues WHERE date = ?', (today,)).fetchone()[0],
+        "waiting": conn.execute('SELECT COUNT(*) FROM queues WHERE status = "waiting" AND date = ?', (today,)).fetchone()[0],
+        "completed": conn.execute('SELECT COUNT(*) FROM queues WHERE status = "completed" AND date = ?', (today,)).fetchone()[0],
+        "total_users": conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
     }
+    conn.close()
+    return stats
