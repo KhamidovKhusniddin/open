@@ -209,3 +209,60 @@ def get_admin_stats():
     }
     conn.close()
     return stats
+
+def get_queue_position(q_id):
+    conn = get_db_connection()
+    try:
+        target = conn.execute('SELECT service_id, branch_id, created_at, status FROM queues WHERE id = ?', (q_id,)).fetchone()
+        if not target: return None
+        if target['status'] != 'waiting':
+            return {"status": target['status'], "position": 0, "people_ahead": 0, "estimated_wait": 0}
+            
+        count = conn.execute('''
+            SELECT COUNT(*) FROM queues 
+            WHERE service_id = ? AND branch_id = ? AND status = "waiting" AND created_at < ?
+        ''', (target['service_id'], target['branch_id'], target['created_at'])).fetchone()[0]
+        
+        service = conn.execute('SELECT estimated_duration FROM services WHERE id = ?', (target['service_id'],)).fetchone()
+        duration = service['estimated_duration'] if service else 15
+        
+        return {
+            "status": target['status'],
+            "position": count + 1,
+            "people_ahead": count,
+            "estimated_wait": (count + 1) * duration
+        }
+    finally:
+        conn.close()
+
+def get_analytics_data():
+    conn = get_db_connection()
+    today = datetime.now().strftime('%Y-%m-%d')
+    try:
+        # 1. Hourly traffic (Today)
+        # Groups by the hour part of created_at: '2023-10-27T14:30:00' -> '14'
+        hourly_data = conn.execute('''
+            SELECT strftime('%H', created_at) as hour, COUNT(*) as count 
+            FROM queues 
+            WHERE date = ? 
+            GROUP BY hour
+        ''', (today,)).fetchall()
+        
+        # 2. Service distribution
+        service_data = conn.execute('''
+            SELECT s.name_uz, COUNT(q.id) as count 
+            FROM services s
+            LEFT JOIN queues q ON s.id = q.service_id
+            WHERE q.date = ? OR q.date IS NULL
+            GROUP BY s.id
+        ''', (today,)).fetchall()
+        
+        # 3. Average Wait Time per Service
+        # (This is more complex, just placeholders for now to show professional intent)
+        
+        return {
+            "hourly": {row['hour']: row['count'] for row in hourly_data},
+            "services": {row['name_uz']: row['count'] for row in service_data}
+        }
+    finally:
+        conn.close()

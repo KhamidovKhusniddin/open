@@ -18,7 +18,9 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/main.css?v=6">
-    <link rel="stylesheet" href="css/landing.css?v=6">
+    <link rel="stylesheet" href="css/landing.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/11494/11494191.png">
     <link rel="stylesheet" href="css/chatbot.css?v=6">
 </head>
 
@@ -256,6 +258,13 @@
     <script src="js/database.js"></script>
     <script src="js/ai-chatbot.js"></script>
     <script src="js/landing.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
 </body>
 
 </html>

@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_bcrypt import Bcrypt
+from flask_socketio import SocketIO, emit
 import os
 import threading
 import time
@@ -27,6 +28,7 @@ app.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY", "super-secret-key-123
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -188,6 +190,13 @@ def get_single_queue(q_id):
         return jsonify({"success": True, "queue": q})
     return jsonify({"success": False, "message": "Queue not found"}), 404
 
+@app.route('/api/queue-position/<string:q_id>', methods=['GET'])
+def get_queue_pos(q_id):
+    pos = database.get_queue_position(q_id)
+    if pos:
+        return jsonify({"success": True, "data": pos})
+    return jsonify({"success": False, "message": "Queue not found"}), 404
+
 @app.route('/api/admin/queues', methods=['GET'])
 @jwt_required()
 def admin_get_queues():
@@ -213,6 +222,12 @@ def admin_get_stats():
     stats = database.get_admin_stats()
     return jsonify({"success": True, "stats": stats})
 
+@app.route('/api/admin/analytics', methods=['GET'])
+@jwt_required()
+def admin_get_analytics():
+    data = database.get_analytics_data()
+    return jsonify({"success": True, "data": data})
+
 @app.route('/api/admin/call_next', methods=['POST'])
 @jwt_required()
 def admin_call_next():
@@ -227,6 +242,9 @@ def admin_call_next():
     database.update_queue_status(next_client['id'], 'serving')
     notify_user_call(next_client)
     
+    # Emit real-time update
+    socketio.emit('queue_updated', {'type': 'call_next', 'queue_id': next_client['id']})
+    
     return jsonify({"success": True, "queue": database.get_queue(next_client['id'])})
 
 @app.route('/api/admin/update_status', methods=['POST'])
@@ -237,6 +255,7 @@ def admin_update_status():
     new_status = data.get('status')
     if q_id and new_status:
         database.update_queue_status(q_id, new_status)
+        socketio.emit('queue_updated', {'type': 'status_change', 'queue_id': q_id, 'status': new_status})
         return jsonify({"success": True})
     return jsonify({"success": False, "message": "Invalid data"}), 400
 
@@ -327,4 +346,4 @@ def notification_scheduler():
 if __name__ == '__main__':
     threading.Thread(target=notification_scheduler, daemon=True).start()
     threading.Thread(target=bot.infinity_polling, daemon=True).start()
-    app.run(debug=False, port=5000, host='0.0.0.0')
+    socketio.run(app, debug=False, port=5000, host='0.0.0.0', allow_unsafe_werkzeug=True)

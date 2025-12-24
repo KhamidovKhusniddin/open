@@ -63,6 +63,7 @@
 
             <nav class="side-nav">
                 <a href="#" class="nav-item active"><i class="fas fa-th-large"></i> Dashboard</a>
+                <a href="#" class="nav-item"><i class="fas fa-chart-line"></i> Analitika</a>
                 <a href="#" class="nav-item"><i class="fas fa-list-ol"></i> Navbatlar</a>
                 <a href="#" class="nav-item"><i class="fas fa-history"></i> Tarix</a>
                 <a href="#" class="nav-item"><i class="fas fa-cog"></i> Sozlamalar</a>
@@ -165,6 +166,31 @@
                 </section>
             </div>
 
+            <!-- View: Analytics (New Professional Dashboard) -->
+            <div id="view-analytics" class="view-section hidden">
+                <header class="top-bar">
+                    <h1>Mijozlar Analitikasi</h1>
+                </header>
+
+                <div class="stats-grid">
+                    <div class="card card-glass">
+                        <h3>📈 Bugungi Tashriflar (Soatlik)</h3>
+                        <canvas id="hourlyTrafficChart"></canvas>
+                    </div>
+                    <div class="card card-glass">
+                        <h3>📊 Xizmatlar Taqsimoti</h3>
+                        <canvas id="serviceUsageChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card card-glass mt-xl">
+                    <h3>💡 AI Tavsiyasi</h3>
+                    <p id="ai-insight" style="color: var(--text-secondary); line-height: 1.6;">
+                        Ma'lumotlar tahlil qilinmoqda...
+                    </p>
+                </div>
+            </div>
+
             <!-- View: Queues (Detailed) -->
             <div id="view-queues" class="view-section hidden">
                 <h2>Barcha Navbatlar</h2>
@@ -204,6 +230,8 @@
         </main>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="config.js"></script>
     <script src="js/admin.js"></script>
 </body>

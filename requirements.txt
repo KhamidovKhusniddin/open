@@ -9,3 +9,4 @@ flask-jwt-extended
 flask-bcrypt
 PyJWT
 bcrypt
+flask-socketio
