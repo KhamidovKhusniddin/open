@@ -8,6 +8,9 @@ from datetime import datetime, timedelta
 
 import google.generativeai as genai
 import database
+import telebot
+from telebot import types
+import json
 
 from dotenv import load_dotenv
 
@@ -25,11 +28,84 @@ if not BOT_TOKEN or not GEMINI_API_KEY:
     print("Warning: BOT_TOKEN or GEMINI_API_KEY not found in environment")
 
 genai.configure(api_key=GEMINI_API_KEY)
-# Use a valid model
 model = genai.GenerativeModel('gemini-flash-latest')
+
+# Initialize Bot
+bot = telebot.TeleBot(BOT_TOKEN)
+
+# In-memory storage for pending sessions (chat_id -> uid)
+pending_uids = {}
+DATA_FILE = "verifications.json" # Keep for temporary UID sessions during login
 
 # Initialize DB
 database.init_db()
+
+# --- Bot Handlers ---
+
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    args = message.text.split()
+    if len(args) > 1:
+        session_uid = args[1]
+        save_session_uid(session_uid, message.chat.id)
+        pending_uids[message.chat.id] = session_uid
+        
+    markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
+    button = types.KeyboardButton("📱 Raqamni yuborish", request_contact=True)
+    markup.add(button)
+    
+    welcome_text = (
+        "👋 <b>Assalomu alaykum!</b>\n\n"
+        "Tasdiqlash kodini olish uchun iltimos <b>'Raqamni yuborish'</b> tugmasini bosing."
+    )
+    bot.send_message(message.chat.id, welcome_text, parse_mode='HTML', reply_markup=markup)
+
+def save_session_uid(uid, chat_id):
+    data = {}
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, 'r') as f:
+            try: data = json.load(f)
+            except: data = {}
+    
+    data[f"uid_{uid}"] = {
+        "user_id": chat_id,
+        "timestamp": datetime.now().isoformat()
+    }
+    with open(DATA_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
+
+def update_uid_with_phone(uid, phone_number):
+    data = {}
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, 'r') as f:
+            try: data = json.load(f)
+            except: data = {}
+    
+    key = f"uid_{uid}"
+    if key in data:
+        data[key]["phone"] = phone_number
+        data[key]["verified"] = True
+    with open(DATA_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
+
+@bot.message_handler(content_types=['contact'])
+def handle_contact(message):
+    if message.contact is not None:
+        phone = message.contact.phone_number
+        if not phone.startswith('+'):
+            phone = '+' + phone
+            
+        # Use database.py to save user
+        database.add_user(phone, message.from_user.id, message.from_user.username)
+
+        if message.chat.id in pending_uids:
+            uid = pending_uids[message.chat.id]
+            update_uid_with_phone(uid, phone)
+            del pending_uids[message.chat.id]
+        
+        bot.send_message(message.chat.id, "✅ Rahmat! Raqamingiz tasdiqlandi.", reply_markup=types.ReplyKeyboardRemove())
+
+# --- Flask Routes ---
 
 @app.route('/api/admin/login', methods=['POST'])
 def admin_login():
@@ -330,6 +406,13 @@ def notification_scheduler():
         time.sleep(60) # Only check every minute
 
 if __name__ == '__main__':
-    # Start background thread
+    # 1. Start Notification Scheduler (Background warnings)
     threading.Thread(target=notification_scheduler, daemon=True).start()
-    app.run(debug=False, port=5000)
+    
+    # 2. Start Telegram Verification Bot
+    print("🤖 Tasdiqlash boti ishga tushdi...")
+    threading.Thread(target=bot.infinity_polling, daemon=True).start()
+    
+    # 3. Start Flask Web Server
+    print("🚀 Web server ishga tushdi: http://localhost:5000")
+    app.run(debug=False, port=5000, host='0.0.0.0')

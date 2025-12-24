@@ -36,10 +36,11 @@ GEMINI_API_KEY=sizning_gemini_kalitingiz
 ```
 
 5. **Ishga tushirish:**
+Loyiha endi bitta faylga birlashtirilgan. Hammasini (Bot + Server + Scheduler) bitta buyruq bilan ishga tushiring:
 ```bash
 python3 app.py
 ```
-Sayt `http://localhost:5000` manzilida ishga tushadi.
+Sayt `http://localhost:5000` manzilida ishga tushadi. Tasdiqlash boti va eslatmalar tizimi avtomatik tarzda fonda boshlanadi.
 
 ---
 
