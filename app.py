@@ -284,15 +284,31 @@ def admin_update_status():
 def notify_user_call(queue_item):
     """Notify user that it's their turn"""
     try:
-        phone = queue_item.get('phone')
+        raw_phone = queue_item.get('phone', '')
+        # Normalize: remove spaces, dashes, parentheses
+        phone = "+" + "".join(filter(str.isdigit, raw_phone))
+        if not phone.startswith('+998') and not raw_phone.startswith('+'):
+             # If it doesn't have a country code and isn't + prefixed, it might be local
+             pass 
+        
+        print(f"📡 Notification attempt for: {phone}")
         user = database.get_user(phone)
+        
         if user and user.get('user_id'):
             user_id = user['user_id']
-            msg = f"🎉 <b>Diqqat! Navbatingiz yetib keldi!</b>\n\nRaqamingiz: <b>{queue_item['number']}</b>\nIltimos, operator oldiga boring."
-            requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={"chat_id": user_id, "text": msg, "parse_mode": "HTML"})
-            print(f"Call notification sent to {phone}")
+            msg = (
+                f"🎉 <b>Diqqat! Navbatingiz yetib keldi!</b>\n\n"
+                f"Raqamingiz: <b>{queue_item['number']}</b>\n"
+                f"Iltimos, operator oldiga boring."
+            )
+            bot.send_message(user_id, msg, parse_mode='HTML')
+            print(f"✅ Call notification sent to {phone} (Chat ID: {user_id})")
+        else:
+            print(f"⚠️ User not found in database for phone: {phone}. No notification sent.")
+            print(f"💡 Tip: User must start the bot and share their contact first.")
+            
     except Exception as e:
-        print(f"Notification error: {e}")
+        print(f"❌ Notification error: {e}")
 
 @app.route('/api/chat', methods=['POST'])
 def chat_ai():

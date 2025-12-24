@@ -138,6 +138,8 @@ def update_notification_level(queue_id, level):
 # --- User Operations ---
 
 def add_user(phone, user_id, username):
+    # Normalize phone: plus sign + digits only
+    phone = "+" + "".join(filter(str.isdigit, phone))
     conn = get_db_connection()
     c = conn.cursor()
     try:
@@ -150,6 +152,7 @@ def add_user(phone, user_id, username):
         conn.close()
 
 def get_user(phone):
+    phone = "+" + "".join(filter(str.isdigit, phone))
     conn = get_db_connection()
     user = conn.execute('SELECT * FROM users WHERE phone = ?', (phone,)).fetchone()
     conn.close()

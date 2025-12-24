@@ -258,7 +258,13 @@
                         <span class="prefix">+998</span>
                         <input type="tel" id="user-phone" placeholder="90 123 45 67" maxlength="12">
                     </div>
-                    <button class="btn btn-primary w-full" onclick="QueueApp.sendVerificationCode()"
+                    <div class="alert alert-warning mt-lg"
+                        style="background: #fff3cd; color: #856404; padding: 1rem; border-radius: 8px; border: 1px solid #ffeeba; font-size: 0.9rem; text-align: left;">
+                        <strong>⚠️ Muhim:</strong> Navbat xabarini olish uchun Telegram botni ishga tushirishingiz
+                        shart. Botda <strong>"Raqamni yuborish"</strong> tugmasini bosing.
+                    </div>
+
+                    <button class="btn btn-primary w-full mt-md" onclick="QueueApp.sendVerificationCode()"
                         data-i18n="send_code">
                         Kod yuborish
                     </button>
@@ -350,6 +356,17 @@
                 </div>
 
                 <div class="ticket-footer">
+                    <div class="bot-reminder card"
+                        style="background: var(--primary-50); border: 1px solid var(--primary-200); margin-bottom: 1.5rem; padding: 1rem;">
+                        <p style="font-size: 0.9rem; color: var(--primary-800); margin-bottom: 0.5rem;">
+                            📢 <b>Navbatingiz kelganda Telegram orqali xabar olmoqchimisiz?</b>
+                        </p>
+                        <a href="https://t.me/queuemanageruzbot" target="_blank" class="btn btn-outline btn-sm w-full"
+                            style="background: white;">
+                            Botni ishga tushirish
+                        </a>
+                    </div>
+
                     <button class="btn btn-primary" onclick="QueueApp.printTicket()" data-i18n="print">
                         Chop etish
                     </button>
