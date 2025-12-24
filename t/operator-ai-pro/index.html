@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operator AI - Aqlli Navbat Tizimi</title>
+    <meta name="description" content="Sun'iy intellektga asoslangan zamonaviy navbat boshqaruv tizimi">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/main.css?v=6">
+    <link rel="stylesheet" href="css/landing.css?v=6">
+    <link rel="stylesheet" href="css/chatbot.css?v=6">
+</head>
+
+<body>
+    <div class="bg-pattern"></div>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="index.html" class="nav-brand">
+                    <span class="brand-icon">🤖</span>
+                    <span class="brand-name">Operator AI</span>
+                </a>
+
+                <div class="nav-menu" id="nav-menu">
+                    <a href="#features" class="nav-link" data-i18n="features">Imkoniyatlar</a>
+                    <a href="#how-it-works" class="nav-link" data-i18n="how_it_works">Qanday ishlaydi</a>
+                    <a href="admin.html" class="nav-link" data-i18n="admin">Administrator</a>
+                </div>
+
+                <div class="nav-actions">
+                    <div class="language-switcher"></div>
+                    <a href="queue.html" class="btn btn-primary" data-i18n="get_ticket">Raqam olish</a>
+                    <button class="nav-toggle" id="nav-toggle">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero reveal" id="home">
+        <div class="hero-bg"></div>
+        <div class="container">
+            <div class="hero-wrapper">
+                <div class="hero-text">
+                    <div class="hero-badge" data-i18n="ai_powered">AI-Powered Queue System</div>
+                    <h1 class="hero-title">
+                        Vaqtingizni <span class="gradient-text">Aqlli</span> Boshqaring
+                    </h1>
+                    <p class="hero-subtitle" data-i18n="hero_subtitle">
+                        Operator AI — navbatlarni sun'iy intellekt yordamida optimallashtiruvchi professional platforma.
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="queue.html" class="btn btn-primary btn-lg" data-i18n="start_now">Hozir boshlash</a>
+                        <a href="#features" class="btn btn-outline btn-lg" data-i18n="learn_more">Batafsil</a>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <div class="stat-number" data-count="1000" data-suffix="+">1000+</div>
+                            <div class="stat-label" data-i18n="total_visitors">Tashrifchilar</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" data-count="50" data-suffix="+">50+</div>
+                            <div class="stat-label" data-i18n="partners">Hamkorlar</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" data-count="99" data-suffix="%">99%</div>
+                            <div class="stat-label" data-i18n="accuracy">Aniq bashorat</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hero-visual animate-fadeIn">
+                    <div class="hero-card card card-glass">
+                        <div class="demo-queue">
+                            <div class="demo-header">
+                                <span class="demo-icon">🎫</span>
+                                <span data-i18n="queue_status">Navbat holati</span>
+                            </div>
+                            <div class="demo-number" id="demo-number">A-42</div>
+                            <div class="demo-info">
+                                <div class="demo-info-item">
+                                    <span data-i18n="estimated_wait">Kutish vaqti</span>
+                                    <strong>~ 12 min</strong>
+                                </div>
+                                <div class="demo-info-item">
+                                    <span data-i18n="people_ahead">Sizdan oldin</span>
+                                    <strong>3 kishi</strong>
+                                </div>
+                            </div>
+                            <div class="demo-qr">
+                                <div class="qr-placeholder"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hero-glow"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features reveal" id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title" data-i18n="features">Imkoniyatlar</h2>
+                <p class="section-subtitle">Zamonaviy texnologiyalar bilan jihozlangan professional tizim</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card card card-glass">
+                    <div class="feature-icon">🤖</div>
+                    <h3 class="feature-title" data-i18n="feature_ai_title">AI Yordamchi</h3>
+                    <p class="feature-desc" data-i18n="feature_ai_desc">
+                        Sun'iy intellekt yordamida avtomatik xizmat tavsiyasi
+                    </p>
+                </div>
+
+                <div class="feature-card card card-glass">
+                    <div class="feature-icon">⚡</div>
+                    <h3 class="feature-title" data-i18n="feature_realtime_title">Real-time yangilanish</h3>
+                    <p class="feature-desc" data-i18n="feature_realtime_desc">
+                        Navbat holati darhol yangilanadi
+                    </p>
+                </div>
+
+                <div class="feature-card card card-glass">
+                    <div class="feature-icon">📊</div>
+                    <h3 class="feature-title" data-i18n="feature_analytics_title">Tahlil va hisobotlar</h3>
+                    <p class="feature-desc" data-i18n="feature_analytics_desc">
+                        To'liq statistika va analitika
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works reveal" id="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Qanday ishlaydi?</h2>
+                <p class="section-subtitle">3 ta oddiy qadam</p>
+            </div>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3 class="step-title" data-i18n="select_service">Xizmatni tanlang</h3>
+                        <p class="step-desc">Tashkilot va xizmat turini tanlang</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3 class="step-title" data-i18n="get_ticket">Raqam oling</h3>
+                        <p class="step-desc">Navbat raqamingiz va QR kod yaratiladi</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Navbatingizni kuzating</h3>
+                        <p class="step-desc">Real-time holat va bildirishnomalar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta reveal">
+        <div class="container">
+            <div class="cta-content">
+                <h2 class="cta-title">Bugun boshlab ko'ring!</h2>
+                <p class="cta-subtitle">Navbatlarni boshqarishni osonlashtiring</p>
+                <div class="cta-buttons">
+                    <a href="queue.html" class="btn btn-primary btn-lg" data-i18n="get_started">Boshlash</a>
+                    <a href="admin.html" class="btn btn-outline btn-lg" data-i18n="admin">Administrator</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="brand">
+                        <span class="brand-icon">🤖</span>
+                        <span class="brand-name">Operator AI</span>
+                    </div>
+                    <p class="footer-desc">
+                        O'zbekistondagi eng zamonaviy navbat boshqaruv tizimi
+                    </p>
+                </div>
+
+                <div class="footer-links">
+                    <div class="footer-col">
+                        <h4 class="footer-title">Sahifalar</h4>
+                        <ul class="footer-list">
+                            <li><a href="queue.html">Navbat</a></li>
+                            <li><a href="admin.html">Administrator</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="footer-col">
+                        <h4 class="footer-title">Aloqa</h4>
+                        <ul class="footer-list">
+                            <li>📧 info@operatorai.uz</li>
+                            <li>📱 +998 71 200 00 00</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2024 Operator AI. Barcha huquqlar himoyalangan.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- AI Chatbot Button -->
+    <div id="ai-chatbot-root"></div>
+
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/language.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/ai-chatbot.js"></script>
+    <script src="js/landing.js"></script>
+</body>
+
+</html>

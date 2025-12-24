@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="uz" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Tracker - Operator AI</title>
+    <link rel="stylesheet" href="css/main.css?v=5">
+    <link rel="stylesheet" href="css/tracker.css?v=5">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/chatbot.css?v=5">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="bg-pattern"></div>
+
+    <nav class="navbar">
+        <div class="container nav-content">
+            <a href="index.html" class="nav-brand">
+                <span class="brand-icon">🤖</span>
+                <span class="brand-name">OPERATOR AI</span>
+            </a>
+            <div class="nav-actions">
+                <select id="language-select" class="nav-lang">
+                    <option value="uz">UZ</option>
+                    <option value="ru">RU</option>
+                    <option value="en">EN</option>
+                </select>
+            </div>
+        </div>
+    </nav>
+
+    <main class="tracker-main container animate-fadeIn">
+        <div class="tracker-card card-glass">
+            <div class="tracker-header">
+                <h1 data-i18n="tracker_title">Live Queue Status</h1>
+                <p data-i18n="tracker_subtitle">Track your position in real-time</p>
+            </div>
+
+            <div class="status-visual">
+                <div class="position-circle">
+                    <span id="queue-number">A-042</span>
+                    <span class="label" data-i18n="your_number">Your Number</span>
+                </div>
+            </div>
+
+            <div class="progress-section">
+                <!-- Walking People Animation -->
+                <div class="tracker-progress-container">
+                    <div class="people-walker">🚶‍♂️</div>
+                    <div class="people-walker">🚶‍♀️</div>
+                    <div class="people-walker">🏃‍♂️</div>
+                </div>
+
+                <div class="progress-info">
+                    <!-- Percent moved to tooltip -->
+                    <span data-i18n="people_ahead"><span id="people-ahead">2</span> people ahead</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="tracker-progress" style="width: 20%;">
+                        <div class="progress-indicator">
+                            <span id="progress-percent" class="progress-tooltip">20%</span>
+                            <!-- Icon is added via CSS ::before -->
+                        </div>
+                    </div>
+                    <div class="destination-flag">
+                        <i class="fa-solid fa-flag-checkered"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="stat-label" data-i18n="arrival_time">Expected Arrival</span>
+                    <span class="stat-value" id="expected-time">09:43 PM</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label" data-i18n="wait_time">Estimated Wait</span>
+                    <span class="stat-value" id="wait-time">2 minutes</span>
+                </div>
+            </div>
+
+            <div class="communication-pane">
+                <div class="pane-header">
+                    <span class="pulse"></span>
+                    <span data-i18n="real_time_updates">Real-time Updates</span>
+                    <span class="time" id="last-update"></span>
+                </div>
+                <div class="pane-body" id="admin-message" data-i18n="tracker_admin_msg">
+                    Everything you see here can be customized to match the look & feel of your brand.
+                </div>
+            </div>
+
+            <div class="notify-section">
+                <div class="email-input-group">
+                    <input type="email" id="notify-email" placeholder="Enter email" data-i18n-placeholder="enter_email">
+                    <button class="btn btn-primary" id="btn-notify">
+                        <span data-i18n="notify_me">Notify me by email</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="tracker-footer">
+                <a href="index.html" class="btn btn-outline" data-i18n="back_home">Back to Home</a>
+            </div>
+        </div>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/language.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/tracker.js"></script>
+
+    <!-- Lottie Player -->
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+
+    <div id="ai-chatbot-root"></div>
+    <script src="js/ai-chatbot.js"></script>
+</body>
+
+</html>

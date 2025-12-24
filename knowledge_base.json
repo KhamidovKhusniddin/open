@@ -1,0 +1,52 @@
+{
+    "organization": {
+        "name": "Davlat Xizmatlari Markazi (Demo)",
+        "description": "Fuqarolarga tezkor va qulay davlat xizmatlarini ko'rsatish markazi.",
+        "address": "Toshkent shahri, Yunusobod tumani, 1-mavze",
+        "working_hours": "Dushanba - Juma: 09:00 - 18:00, Shanba: 09:00 - 13:00, Yakshanba: Dam olish",
+        "lunch_break": "13:00 - 14:00",
+        "contact": "+998 71 200-00-00"
+    },
+    "services": [
+        {
+            "name": "Pasport olish (ID Karta)",
+            "required_documents": [
+                "Eski pasport yoki tug'ilganlik guvohnomasi",
+                "To'lov kvitansiyasi (BHM 1 baravari)",
+                "3x4 rasm (joyida tushiriladi)"
+            ],
+            "price": "340,000 so'm",
+            "process_time": "1 ish kuni"
+        },
+        {
+            "name": "Haydovchilik guvohnomasi",
+            "required_documents": [
+                "Pasport yoki ID karta",
+                "Imtihon topshirilganligi haqida ma'lumotnoma",
+                "083-tibbiy ma'lumotnoma"
+            ],
+            "price": "270,000 so'm",
+            "process_time": "30 daqiqa"
+        },
+        {
+            "name": "Kadastr xizmatlari",
+            "required_documents": [
+                "Pasport nusxasi",
+                "Uy-joy bo'yicha qaror (Hokim qarori)",
+                "Oldi-sotdi shartnomasi (agar mavjud bo'lsa)"
+            ],
+            "price": "Kvadraturasiga qarab hisoblanadi",
+            "process_time": "3-5 ish kuni"
+        }
+    ],
+    "faq": [
+        {
+            "question": "Navbatni qanday olsam bo'ladi?",
+            "answer": "Siz ushbu sayt orqali yoki Telegram botimiz orqali onlayn navbat olishingiz mumkin."
+        },
+        {
+            "question": "Dam olish kunlari ishlaysizlarmi?",
+            "answer": "Faqat Shanba kuni soat 13:00 gacha ishlaymiz. Yakshanba - dam olish kuni."
+        }
+    ]
+}

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xodim Paneli - Operator AI</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👨‍💼</text></svg>">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/staff.css">
+</head>
+
+<body>
+    <div class="staff-container">
+        <!-- Header -->
+        <header class="staff-header">
+            <div class="header-left">
+                <span class="brand-icon">🤖</span>
+                <span class="brand-name gradient-text">Operator AI</span>
+                <span class="staff-badge">Staff Panel</span>
+            </div>
+            <div class="header-right">
+                <div class="language-switcher"></div>
+                <div class="staff-info" id="staff-info">
+                    <span class="staff-name" id="staff-name">Staff Member</span>
+                    <span class="staff-counter" id="staff-counter">Counter 1</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="staff-main">
+            <!-- Current Queue -->
+            <div class="current-queue-section">
+                <div class="card">
+                    <h2 class="card-title" data-i18n="current_customer">Joriy mijoz</h2>
+
+                    <div id="current-queue-display">
+                        <div class="no-queue">
+                            <div class="no-queue-icon">📭</div>
+                            <p data-i18n="no_current_queue">Hozirda navbat yo'q</p>
+                            <button class="btn btn-primary btn-lg" onclick="StaffApp.callNext()">
+                                <span>📞</span>
+                                <span data-i18n="call_next">Keyingisini chaqirish</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Waiting Queue -->
+            <div class="waiting-queue-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title" data-i18n="waiting">Kutmoqda</h3>
+                        <span class="badge badge-primary" id="waiting-count">0</span>
+                    </div>
+                    <div class="waiting-list" id="waiting-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Stats -->
+            <div class="stats-section">
+                <div class="card">
+                    <h3 class="card-title" data-i18n="today_stats">Bugungi statistika</h3>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-value" id="stat-served">0</div>
+                            <div class="stat-label" data-i18n="served_today">Xizmat ko'rsatildi</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="stat-avg-time">0</div>
+                            <div class="stat-label">O'rtacha vaqt (min)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <!DOCTYPE html>
+    <html lang="uz">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Xodim Paneli - Operator AI</title>
+        <link rel="icon"
+            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👨‍💼</text></svg>">
+        <link rel="stylesheet" href="css/main.css">
+        <link rel="stylesheet" href="css/staff.css">
+    </head>
+
+    <body>
+        <div class="staff-container">
+            <!-- Header -->
+            <header class="staff-header">
+                <div class="header-left">
+                    <span class="brand-icon">🤖</span>
+                    <span class="brand-name gradient-text">Operator AI</span>
+                    <span class="staff-badge">Staff Panel</span>
+                </div>
+                <div class="header-right">
+                    <div class="language-switcher"></div>
+                    <div class="staff-info" id="staff-info">
+                        <span class="staff-name" id="staff-name">Staff Member</span>
+                        <span class="staff-counter" id="staff-counter">Counter 1</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <main class="staff-main">
+                <!-- Current Queue -->
+                <div class="current-queue-section">
+                    <div class="card">
+                        <h2 class="card-title" data-i18n="current_customer">Joriy mijoz</h2>
+
+                        <div id="current-queue-display">
+                            <div class="no-queue">
+                                <div class="no-queue-icon">📭</div>
+                                <p data-i18n="no_current_queue">Hozirda navbat yo'q</p>
+                                <button class="btn btn-primary btn-lg" onclick="StaffApp.callNext()">
+                                    <span>📞</span>
+                                    <span data-i18n="call_next">Keyingisini chaqirish</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Waiting Queue -->
+                <div class="waiting-queue-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title" data-i18n="waiting">Kutmoqda</h3>
+                            <span class="badge badge-primary" id="waiting-count">0</span>
+                        </div>
+                        <div class="waiting-list" id="waiting-list">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Today's Stats -->
+                <div class="stats-section">
+                    <div class="card">
+                        <h3 class="card-title" data-i18n="today_stats">Bugungi statistika</h3>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-value" id="stat-served">0</div>
+                                <div class="stat-label" data-i18n="served_today">Xizmat ko'rsatildi</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="stat-avg-time">0</div>
+                                <div class="stat-label">O'rtacha vaqt (min)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Scripts -->
+        <script src="config.js"></script>
+        <script src="js/utils.js"></script>
+        <script src="js/language.js"></script>
+        <script src="js/database.js"></script>
+        <script src="js/queue-manager.js"></script>
+        <script src="js/notifications.js"></script>
+        <script src="js/staff.js"></script>
+    </body>
+
+    </html>

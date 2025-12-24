@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="uz" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operator Dashboard - Operator AI</title>
+    <link rel="stylesheet" href="css/main.css?v=6">
+    <link rel="stylesheet" href="css/admin.css?v=1">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👨‍💼</text></svg>">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="icon">🤖</span>
+                <span>Operator AI</span>
+            </div>
+
+            <nav class="side-nav">
+                <a href="#" class="nav-item active"><i class="fas fa-th-large"></i> Dashboard</a>
+                <a href="#" class="nav-item"><i class="fas fa-list-ol"></i> Navbatlar</a>
+                <a href="#" class="nav-item"><i class="fas fa-history"></i> Tarix</a>
+                <a href="#" class="nav-item"><i class="fas fa-cog"></i> Sozlamalar</a>
+            </nav>
+
+            <div class="user-profile">
+                <div class="avatar">👨‍💼</div>
+                <div class="info">
+                    <span class="name">Admin</span>
+                    <span class="role">Operator</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h1>Dashboard</h1>
+                <div class="status-indicator online">
+                    <span class="dot"></span> Tizim Online
+                </div>
+            </header>
+
+            <!-- View: Dashboard -->
+            <div id="view-dashboard" class="view-section">
+                <!-- Stats Overview -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="icon blue"><i class="fas fa-users"></i></div>
+                        <div class="details">
+                            <span class="label">Kutayotganlar</span>
+                            <span class="value" id="stat-waiting">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon orange"><i class="fas fa-clock"></i></div>
+                        <div class="details">
+                            <span class="label">O'rtacha Vaqt</span>
+                            <span class="value">12 daq</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon green"><i class="fas fa-check-circle"></i></div>
+                        <div class="details">
+                            <span class="label">Xizmat Ko'rsatildi</span>
+                            <span class="value" id="stat-served">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Serving -->
+                <section class="current-serving-section">
+                    <div class="serving-card">
+                        <h2>Hozir Xizmat Ko'rsatilyapti</h2>
+                        <div class="big-number" id="current-number">---</div>
+                        <div class="controls">
+                            <button class="btn btn-success" id="btn-complete"><i class="fas fa-check"></i> Tugatish</button>
+                            <button class="btn btn-warning" id="btn-recall"><i class="fas fa-bell"></i> Qayta
+                                Chaqirish</button>
+                            <button class="btn btn-danger" id="btn-noshow"><i class="fas fa-times"></i> Kelmadi</button>
+                        </div>
+                    </div>
+
+                    <div class="next-up-card">
+                        <h2>Keyingi Navbat</h2>
+                        <div class="next-info">
+                            <span class="next-number" id="next-number">---</span>
+                            <button class="btn btn-primary btn-lg" id="btn-call-next">
+                                <i class="fas fa-bullhorn"></i> Keyingisini Chaqirish
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Queue List -->
+                <section class="queue-list-section">
+                    <h2>Kutayotganlar Ro'yxati</h2>
+                    <div class="table-container">
+                        <table class="queue-table">
+                            <thead>
+                                <tr>
+                                    <th>Raqam</th>
+                                    <th>Telefon</th>
+                                    <th>Vaqt</th>
+                                    <th>Xizmat</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="queue-table-body">
+                                <!-- JS will populate -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- View: Queues (Detailed) -->
+            <div id="view-queues" class="view-section hidden">
+                <h2>Barcha Navbatlar</h2>
+                <div class="card">
+                     <p>Bu bo'limda barcha faol navbatlar ro'yxati va boshqaruvi bo'ladi.</p>
+                     <!-- Future: Add filtering, search, and full list here -->
+                </div>
+            </div>
+
+            <!-- View: History -->
+            <div id="view-history" class="view-section hidden">
+                <h2>Tarix</h2>
+                 <div class="card">
+                     <p>Bu bo'limda xizmat ko'rsatish tarixi va hisobotlar bo'ladi.</p>
+                </div>
+            </div>
+
+            <!-- View: Settings -->
+            <div id="view-settings" class="view-section hidden">
+                <h2>Sozlamalar</h2>
+                 <div class="card">
+                     <form id="settings-form">
+                        <div class="form-group">
+                            <label>Tashkilot Nomi</label>
+                            <input type="text" class="form-control" value="Operator AI Demo">
+                        </div>
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label>Ish Vaqti</label>
+                            <div style="display: flex; gap: 1rem;">
+                                <input type="time" class="form-control" value="09:00">
+                                <input type="time" class="form-control" value="18:00">
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-primary mt-xl">Saqlash</button>
+                     </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+
+</html>

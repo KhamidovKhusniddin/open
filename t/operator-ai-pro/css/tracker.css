@@ -1,0 +1,622 @@
+/* Tracker Page Styles */
+.tracker-main {
+    padding: 6rem 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 100px);
+}
+
+.tracker-card {
+    width: 100%;
+    max-width: 520px;
+    padding: 3.5rem;
+    text-align: center;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-premium);
+    border: 1px solid var(--glass-border);
+}
+
+.tracker-header {
+    margin-bottom: 3rem;
+}
+
+.tracker-header h1 {
+    font-size: 2.25rem;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.tracker-header p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+/* Status Visual (Premium Gauge) */
+.status-visual {
+    margin: 3.5rem 0;
+    display: flex;
+    justify-content: center;
+    position: relative;
+}
+
+.position-circle {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: var(--dark-elevated);
+    border: 8px solid var(--dark-surface);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+}
+
+.position-circle::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    border-radius: 50%;
+    border: 8px solid var(--primary-color);
+    clip-path: polygon(50% 50%, 0 0, 100% 0, 100% 100%);
+    z-index: 0;
+}
+
+.position-circle span:first-child {
+    font-size: 4.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    text-shadow: var(--glow-primary);
+    line-height: 1;
+    font-family: var(--font-display);
+}
+
+.position-circle .label {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-top: 0.75rem;
+    font-weight: 800;
+}
+
+/* Progress Section */
+.progress-section {
+    margin-top: 3.5rem;
+    text-align: left;
+}
+
+/* Progress Info Spacing */
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 2.5rem;
+    /* MUCH larger gap to prevent overlap */
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    position: relative;
+    z-index: 5;
+}
+
+.progress-bar-container {
+    height: 24px;
+    /* Thicker track */
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-full);
+    position: relative;
+    overflow: visible;
+    /* Allow walker to stick out */
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    margin-top: 2rem;
+    /* More space from text */
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--primary-color);
+    box-shadow: var(--glow-primary);
+    border-radius: var(--radius-full);
+    transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+}
+
+/* Walking Icon Container */
+.progress-indicator {
+    position: absolute;
+    right: -25px;
+    top: -55px;
+    /* Stand on track */
+    width: 60px;
+    height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+    pointer-events: none;
+
+    /* Animation */
+    animation: walk-bounce 0.8s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* The Neon Icon */
+.progress-indicator::before {
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    content: "\f554";
+    /* Person Walking */
+    font-size: 2.8rem;
+
+    /* Gradient Text / Neon Look */
+    background: linear-gradient(180deg, #60a5fa, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+
+    /* Neon Glow */
+    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+}
+
+/* Percentage Tooltip - Speech Bubble Style */
+.progress-tooltip {
+    position: absolute;
+    top: -15px;
+    /* Above head */
+    left: 50%;
+    transform: translateX(-50%);
+
+    background: white;
+    color: #3b82f6;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    white-space: nowrap;
+    z-index: 25;
+}
+
+/* Tooltip arrow */
+.progress-tooltip::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px 6px 0;
+    border-style: solid;
+    border-color: white transparent transparent transparent;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 3.5rem 0;
+}
+
+.stat-box {
+    background: var(--dark-surface);
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: var(--transition-base);
+}
+
+.stat-box:hover {
+    background: var(--dark-elevated);
+    border-color: var(--primary-color);
+    transform: translateY(-4px);
+    box-shadow: var(--glow-soft), var(--shadow-md);
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+}
+
+/* Walking Emoji Animation */
+.tracker-progress-container {
+    position: relative;
+    padding-top: 30px;
+    /* Space for walkers */
+    overflow: hidden;
+}
+
+.people-walker {
+    position: absolute;
+    top: -35px;
+    font-size: 2rem;
+    animation: walkAcross 10s linear infinite;
+    opacity: 0.8;
+}
+
+@keyframes walkAcross {
+    0% {
+        left: -10%;
+        transform: scaleX(1);
+    }
+
+    49% {
+        transform: scaleX(1);
+    }
+
+    50% {
+        left: 110%;
+        transform: scaleX(-1);
+    }
+
+    /* Turn around */
+    51% {
+        transform: scaleX(-1);
+    }
+
+    100% {
+        left: -10%;
+        transform: scaleX(-1);
+    }
+}
+
+/* Staggered animations */
+.people-walker:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.people-walker:nth-child(2) {
+    animation-delay: 3s;
+    animation-duration: 12s;
+}
+
+.people-walker:nth-child(3) {
+    animation-delay: 6s;
+    animation-duration: 15s;
+}
+
+.stat-value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: var(--font-display);
+}
+
+/* Communication Pane */
+.communication-pane {
+    background: var(--dark-surface);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    margin-top: 2rem;
+    text-align: left;
+    box-shadow: var(--shadow-sm);
+}
+
+.pane-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.pulse {
+    width: 10px;
+    height: 10px;
+    background: var(--success-color);
+    border-radius: 50%;
+    animation: ring 1.5s infinite;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.pane-header .time {
+    margin-left: auto;
+    font-weight: 500;
+}
+
+.pane-body {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    line-height: 1.6;
+    font-weight: 500;
+}
+
+/* Email Notification */
+.notify-section {
+    margin-top: 3.5rem;
+}
+
+.email-input-group {
+    display: flex;
+    gap: 1rem;
+}
+
+.email-input-group input {
+    flex: 1;
+    background: var(--dark-surface);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.5rem;
+    color: var(--text-primary);
+    outline: none;
+    font-family: var(--font-main);
+    transition: var(--transition-base);
+}
+
+.email-input-group input:focus {
+    background: var(--dark-elevated);
+    border-color: var(--primary-color);
+    box-shadow: var(--glow-soft);
+}
+
+/* Animations */
+@keyframes ring {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+@keyframes mega-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4), 0 0 20px rgba(59, 130, 246, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 0 20px rgba(59, 130, 246, 0), 0 0 40px rgba(59, 130, 246, 0.4);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0), 0 0 20px rgba(59, 130, 246, 0.2);
+    }
+}
+
+@keyframes neon-flicker {
+
+    0%,
+    18%,
+    22%,
+    25%,
+    53%,
+    57%,
+    100% {
+        text-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 20px rgba(59, 130, 246, 0.4), 0 0 5px white;
+    }
+
+    20%,
+    24%,
+    55% {
+        text-shadow: none;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% center;
+    }
+
+    100% {
+        background-position: 200% center;
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.position-circle {
+    /* Existing styles... keeping them but adding animation */
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: var(--dark-elevated);
+    border: 8px solid var(--dark-surface);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    /* New Animation */
+    animation: mega-pulse 3s infinite ease-in-out, float 6s ease-in-out infinite;
+}
+
+.position-circle span:first-child {
+    font-size: 4.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+    font-family: var(--font-display);
+    /* New Glow */
+    animation: neon-flicker 4s infinite alternate;
+}
+
+.progress-bar-container {
+    height: 24px;
+    /* Thicker track */
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-full);
+    position: relative;
+    overflow: visible;
+    /* Allow walker to stick out */
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    margin-top: 1rem;
+}
+
+.progress-bar {
+    height: 100%;
+    /* Gradient: Blue -> Purple */
+    background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    border-radius: var(--radius-full);
+    transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    /* Animated sheen */
+    background-size: 200% 200%;
+    animation: gradient-move 3s ease infinite;
+}
+
+.destination-flag {
+    position: absolute;
+    right: -10px;
+    top: -28px;
+    font-size: 1.8rem;
+    color: var(--text-primary);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+    animation: flag-wave 2s ease-in-out infinite alternate;
+    z-index: 5;
+}
+
+@keyframes flag-wave {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(10deg);
+    }
+}
+
+/* Walking Lottie Container */
+.progress-indicator {
+    position: absolute;
+    right: -30px;
+    /* Adjust for larger Lottie */
+    top: -65px;
+    /* Move up to stand on track */
+    width: 80px;
+    height: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    pointer-events: none;
+    /* Let clicks pass through */
+}
+
+/* Remove CSS Icon and Animation */
+.progress-indicator::before {
+    content: none;
+}
+
+/* Percentage Tooltip */
+.progress-tooltip {
+    position: absolute;
+    top: -35px;
+    background: var(--primary-gradient);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+}
+
+/* Tooltip arrow */
+.progress-tooltip::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px 5px 0;
+    border-style: solid;
+    border-color: #3b82f6 transparent transparent transparent;
+}
+
+/* Walking Animation Keyframes */
+@keyframes walk-bounce {
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(-5deg);
+    }
+
+    50% {
+        transform: translateY(-6px) rotate(5deg);
+    }
+}
+
+@keyframes gradient-move {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 600px) {
+    .tracker-card {
+        padding: 2.5rem 1.5rem;
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
+    }
+
+    .email-input-group {
+        flex-direction: column;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}

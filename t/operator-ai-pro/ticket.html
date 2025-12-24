@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="uz" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sizning Chiptangiz - Operator AI</title>
+    <link rel="stylesheet" href="css/main.css?v=6">
+    <link rel="stylesheet" href="css/ticket.css?v=1">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎫</text></svg>">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- HTML2Canvas for downloading ticket -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+</head>
+
+<body>
+    <div class="ticket-container animate-fadeIn">
+        <div class="ticket-wrapper" id="ticket-visual">
+            <div class="ticket-header">
+                <div class="brand">
+                    <span class="icon">🤖</span>
+                    <span>Operator AI</span>
+                </div>
+                <div class="ticket-title">ELEKTRON NAVBAT</div>
+            </div>
+
+            <div class="ticket-body">
+                <div class="queue-number-section">
+                    <span class="label">Sizning Raqamingiz</span>
+                    <h1 class="number" id="t-number">---</h1>
+                </div>
+
+                <div class="ticket-details">
+                    <div class="detail-row">
+                        <span class="d-label">Sana</span>
+                        <span class="d-value" id="t-date">--.--.----</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="d-label">Vaqt</span>
+                        <span class="d-value highlight" id="t-time">--:--</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="d-label">Xizmat</span>
+                        <span class="d-value" id="t-service">...</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="d-label">Mutaxassis</span>
+                        <span class="d-value" id="t-staff">...</span>
+                    </div>
+                </div>
+
+                <div class="qr-section">
+                    <div id="qrcode"></div>
+                    <p class="qr-text" id="t-id">ID: ---</p>
+                </div>
+            </div>
+
+            <div class="ticket-footer">
+                <p>Iltimos, ushbu chiptani saqlab qo'ying</p>
+                <div class="holes-top"></div>
+                <div class="holes-bottom"></div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-primary btn-lg" id="btn-download">
+                <i class="fas fa-download"></i> Yuklab Olish (Rasm)
+            </button>
+            <a href="tracker.html" class="btn btn-outline btn-lg" id="btn-tracker">
+                <i class="fas fa-eye"></i> Kuzatish
+            </a>
+            <a href="index.html" class="btn-text">Bosh sahifa</a>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/ticket.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navbat Olish - Operator AI</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎫</text></svg>">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css?v=8">
+    <link rel="stylesheet" href="css/queue.css?v=8">
+    <link rel="stylesheet" href="css/chatbot.css?v=8">
+    <style>
+        .time-slots {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+        }
+
+        .time-slot {
+            padding: var(--spacing-sm);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .time-slot:hover:not(.disabled) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .time-slot.selected {
+            background: var(--primary-gradient);
+            color: white;
+            border-color: transparent;
+        }
+
+        .time-slot.disabled {
+            background: var(--gray-100);
+            color: var(--gray-400);
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+
+        .verification-container {
+            max-width: 400px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .phone-input {
+            width: 100%;
+            padding: var(--spacing-md);
+            font-size: var(--text-lg);
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--spacing-lg);
+            outline: none;
+        }
+
+        .phone-input:focus {
+            border-color: var(--primary);
+        }
+
+        .code-inputs {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .code-input {
+            width: 50px;
+            height: 60px;
+            font-size: var(--text-2xl);
+            text-align: center;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-md);
+            outline: none;
+        }
+
+        .code-input:focus {
+            border-color: var(--primary);
+        }
+
+        .staff-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+            margin-top: var(--spacing-lg);
+        }
+
+        .staff-card {
+            background: white;
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            border: 2px solid transparent;
+            box-shadow: var(--shadow-md);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            text-align: center;
+        }
+
+        .staff-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .staff-card.selected {
+            border-color: var(--primary);
+            background: var(--primary-50);
+        }
+
+        .staff-avatar {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .staff-name {
+            font-weight: 700;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .staff-role {
+            font-size: var(--text-sm);
+            color: var(--gray-500);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="brand">
+                    <span class="brand-icon">🤖</span>
+                    <a href="index.html" class="back-btn" data-i18n-title="back">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                        </svg>
+                    </a>
+                    <h1 data-i18n="get_ticket">Raqam olish</h1>
+                    <div class="nav-actions">
+                        <div class="language-switcher"></div>
+                    </div>
+            </div>
+
+            <!-- Pre-defined step titles for clarity -->
+            <div class="step-indicator">
+                <div class="step-item active" data-step="1">
+                    <div class="step-circle">1</div>
+                    <span data-i18n="organizations">Tashkilot</span>
+                </div>
+                <div class="step-item" data-step="2">
+                    <div class="step-circle">2</div>
+                    <span data-i18n="branches">Filial</span>
+                </div>
+                <div class="step-item" data-step="3">
+                    <div class="step-circle">3</div>
+                    <span data-i18n="services">Xizmat</span>
+                </div>
+                <div class="step-item" data-step="4">
+                    <div class="step-circle">4</div>
+                    <span data-i18n="staff">Mutaxassis</span>
+                </div>
+                <div class="step-item" data-step="5">
+                    <div class="step-circle">5</div>
+                    <span data-i18n="date_time">Vaqt</span>
+                </div>
+                <div class="step-item" data-step="6">
+                    <div class="step-circle">6</div>
+                    <span data-i18n="verification">Tasdiqlash</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="queue-main container">
+        <!-- Step 1: Organization Selection -->
+        <div id="step-1" class="step-content">
+            <h2 class="step-title" data-i18n="select_organization">Tashkilotni tanlang</h2>
+            <div class="org-grid" id="organizations-grid">
+                <!-- Loaded via JS -->
+            </div>
+        </div>
+
+        <!-- Step 2: Branch Selection -->
+        <div id="step-2" class="step-content hidden">
+            <h2 class="step-title" data-i18n="select_branch">Filialni tanlang</h2>
+            <div class="branch-grid" id="branches-grid">
+                <!-- Loaded via JS -->
+            </div>
+        </div>
+
+        <!-- Step 3: Service Selection -->
+        <div id="step-3" class="step-content hidden">
+            <h2 class="step-title" data-i18n="select_service">Xizmatni tanlang</h2>
+            <div class="service-grid" id="services-grid">
+                <!-- Loaded via JS -->
+            </div>
+        </div>
+
+        <!-- Step 4: Specialist Selection -->
+        <div id="step-4" class="step-content hidden">
+            <h2 class="step-title" data-i18n="select_staff">Mutaxassisni tanlang (ixtiyoriy)</h2>
+            <div class="staff-grid" id="staff-grid">
+                <!-- Loaded via JS -->
+            </div>
+            <div class="staff-actions mt-xl text-center">
+                <button class="btn btn-outline" onclick="QueueApp.selectStaff('anyone')" data-i18n="skip_staff">
+                    Istalgan mutaxassis
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 5: Date & Time Selection -->
+        <div id="step-5" class="step-content hidden">
+            <h2 class="step-title" data-i18n="select_date_time">Vaqtni tanlang</h2>
+            <div class="datetime-container card card-glass">
+                <div class="date-selection">
+                    <label for="booking-date" data-i18n="select_date">Kunni tanlang:</label>
+                    <input type="date" id="booking-date" class="date-input">
+                </div>
+
+                <div id="time-selection" class="time-selection hidden">
+                    <h3 data-i18n="select_time">Vaqtni tanlang:</h3>
+                    <div class="time-slots" id="time-slots">
+                        <!-- Loaded via JS -->
+                    </div>
+                </div>
+
+                <div class="datetime-actions mt-xl">
+                    <button id="confirm-datetime" class="btn btn-primary w-full"
+                        onclick="QueueApp.proceedToVerification()" disabled data-i18n="confirm">
+                        Tasdiqlash
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 6: Phone Verification -->
+        <div id="step-6" class="step-content hidden">
+            <h2 class="step-title" data-i18n="verification">Tasdiqlash</h2>
+            <div class="verification-container card card-glass">
+                <div id="phone-entry" class="phone-entry">
+                    <p class="verification-desc" data-i18n="enter_phone_desc">
+                        Raqam olish uchun telefon raqamingizni kiriting. Tasdiqlash kodi Telegram orqali yuboriladi.
+                    </p>
+                    <div class="input-group">
+                        <span class="prefix">+998</span>
+                        <input type="tel" id="user-phone" placeholder="90 123 45 67" maxlength="12">
+                    </div>
+                    <button class="btn btn-primary w-full" onclick="QueueApp.sendVerificationCode()"
+                        data-i18n="send_code">
+                        Kod yuborish
+                    </button>
+
+                    <div id="telegram-link-container" class="telegram-link-container hidden mt-xl">
+                        <p class="verification-info" data-i18n="telegram_info">Botga o'tib 'Start' tugmasini bosing:</p>
+                        <a href="#" id="bot-link" target="_blank" class="btn btn-outline w-full">
+                            Telegram Botni ochish
+                        </a>
+                        <p id="polling-status" class="status-text mt-sm"></p>
+                    </div>
+
+                    <button id="manual-id-btn" class="btn btn-outline btn-sm w-full mt-xl hidden"
+                        onclick="QueueApp.manualChatId()">
+                        Chat ID ni qo'lda kiritish
+                    </button>
+                </div>
+
+                <div id="code-entry" class="code-entry hidden">
+                    <p class="verification-desc" data-i18n="enter_code_desc">Telegramga yuborilgan 4 xonali kodni
+                        kiriting:</p>
+                    <div class="code-inputs">
+                        <input type="text" class="code-input" maxlength="1" inputmode="numeric">
+                        <input type="text" class="code-input" maxlength="1" inputmode="numeric">
+                        <input type="text" class="code-input" maxlength="1" inputmode="numeric">
+                        <input type="text" class="code-input" maxlength="1" inputmode="numeric">
+                    </div>
+                    <button class="btn btn-primary w-full mt-xl" onclick="QueueApp.verifyCode()" data-i18n="verify">
+                        Tasdiqlash
+                    </button>
+                    <button class="btn btn-link w-full mt-sm" onclick="QueueApp.sendVerificationCode()"
+                        data-i18n="resend_code">
+                        Kod qayta yuborish
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 7: Success & Ticket -->
+        <div id="step-7" class="step-content hidden">
+            <div class="success-header animate-fadeIn">
+                <div class="success-icon">✅</div>
+                <h2 data-i18n="success_booking">Muvaffaqiyatli band qilindi!</h2>
+                <p data-i18n="ticket_ready">Sizning elektron chiptangiz tayyor</p>
+            </div>
+
+            <div class="ticket-container card card-glass animate-fadeIn">
+                <div class="ticket-header">
+                    <div class="ticket-logo">
+                        <span class="logo-icon">🤖</span>
+                        <span id="ticket-org">Operator AI</span>
+                    </div>
+                    <div class="ticket-branch" id="ticket-branch">Bosh filial</div>
+                </div>
+
+                <div class="ticket-body">
+                    <div class="ticket-main-info">
+                        <div class="info-label" data-i18n="your_number">Sizning raqamingiz</div>
+                        <div class="info-value number" id="ticket-number">A-000</div>
+                    </div>
+
+                    <div class="ticket-details">
+                        <div class="detail-item">
+                            <span class="detail-label" data-i18n="service">Xizmat</span>
+                            <span class="detail-value" id="ticket-service">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label" data-i18n="staff">Mutaxassis</span>
+                            <span class="detail-value" id="ticket-staff">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label" data-i18n="time">Vaqt</span>
+                            <span class="detail-value" id="ticket-time">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label" data-i18n="date">Sana</span>
+                            <span class="detail-value" id="ticket-date">-</span>
+                        </div>
+                    </div>
+
+                    <div class="ticket-qr"
+                        style="background: transparent; border: 2px dashed var(--glass-border); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;">
+                        <span
+                            style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin-bottom: 0.5rem;"
+                            data-i18n="your_number">NAVBAT RAQAMI</span>
+                        <span id="ticket-number-big"
+                            style="font-size: 3.5rem; font-weight: 800; color: var(--primary-color); line-height: 1; font-family: var(--font-display); text-shadow: var(--glow-primary);">A-000</span>
+                    </div>
+                </div>
+
+                <div class="ticket-footer">
+                    <button class="btn btn-primary" onclick="QueueApp.printTicket()" data-i18n="print">
+                        Chop etish
+                    </button>
+                    <button class="btn btn-link" onclick="QueueApp.reset()" data-i18n="get_new_ticket">
+                        Yangi raqam olish
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="ai-chatbot-root"></div>
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/language.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/queue-manager.js"></script>
+    <script src="js/ai-chatbot.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/queue.js"></script>
+</body>
+
+</html>

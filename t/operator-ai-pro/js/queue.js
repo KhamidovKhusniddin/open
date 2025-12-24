@@ -1,0 +1,565 @@
+// Queue Interface JavaScript
+
+const QueueApp = {
+    currentStep: 1,
+    selectedOrg: null,
+    selectedBranch: null,
+    selectedService: null,
+    selectedStaff: null,
+    selectedDate: null,
+    selectedTime: null,
+    userPhone: '',
+    verificationCode: null,
+    currentQueue: null,
+
+    init() {
+        this.loadOrganizations();
+        this.startRealTimeUpdates();
+        this.setupDateInput();
+        this.setupCodeInputs();
+    },
+
+    goToStep(step) {
+        const direction = step > this.currentStep ? 'next' : 'prev';
+        const currentStepEl = document.getElementById(`step-${this.currentStep}`);
+        const nextStepEl = document.getElementById(`step-${step}`);
+
+        // If it's the first load or same step (shouldn't happen), just show
+        if (!currentStepEl || step === this.currentStep) {
+            this.showStepImmediately(step);
+            return;
+        }
+
+        // Animate Out Current
+        currentStepEl.classList.remove('slide-in-right', 'slide-in-left', 'hidden');
+        currentStepEl.classList.add(direction === 'next' ? 'slide-out-left' : 'slide-out-right');
+
+        // Wait for animation to finish then hide and show next
+        setTimeout(() => {
+            currentStepEl.classList.add('hidden');
+            currentStepEl.classList.remove('slide-out-left', 'slide-out-right');
+
+            if (nextStepEl) {
+                nextStepEl.classList.remove('hidden', 'slide-out-left', 'slide-out-right');
+                nextStepEl.classList.add(direction === 'next' ? 'slide-in-right' : 'slide-in-left');
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 400); // slightly less than css animation time 0.5s to feel snappy
+
+        // Update step indicator
+        this.updateStepIndicator(step);
+        this.currentStep = step;
+    },
+
+    showStepImmediately(step) {
+        document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
+        const stepEl = document.getElementById(`step-${step}`);
+        if (stepEl) {
+            stepEl.classList.remove('hidden');
+            stepEl.classList.add('animate-fadeIn'); // simple fade for first load
+        }
+        this.updateStepIndicator(step);
+        this.currentStep = step;
+    },
+
+    updateStepIndicator(step) {
+        document.querySelectorAll('.step-item').forEach((el) => {
+            el.classList.remove('active', 'completed');
+            const stepNum = parseInt(el.dataset.step);
+            if (stepNum < step) {
+                el.classList.add('completed');
+            } else if (stepNum === step) {
+                el.classList.add('active');
+            }
+        });
+    },
+
+    loadOrganizations() {
+        const orgs = Database.getOrganizations();
+        const grid = document.getElementById('organizations-grid');
+
+        grid.innerHTML = orgs.map(org => {
+            const orgType = CONFIG.organizationTypes.find(t => t.id === org.type);
+            return `
+        <div class="org-item" onclick="QueueApp.selectOrganization('${org.id}')">
+          <span class="item-icon">${orgType?.icon || '🏢'}</span>
+          <div class="item-name">${org.name}</div>
+          <div class="item-desc">${orgType?.nameUz || org.type}</div>
+        </div>
+      `;
+        }).join('');
+    },
+
+    selectOrganization(orgId) {
+        this.selectedOrg = orgId;
+        this.loadBranches(orgId);
+        this.goToStep(2);
+    },
+
+    loadBranches(orgId) {
+        const branches = Database.getBranches(orgId);
+        const grid = document.getElementById('branches-grid');
+
+        if (branches.length === 0) {
+            grid.innerHTML = '<p class="text-center">Filiallar topilmadi</p>';
+            return;
+        }
+
+        grid.innerHTML = branches.map(branch => `
+      <div class="branch-item" onclick="QueueApp.selectBranch('${branch.id}')">
+        <span class="item-icon">🏢</span>
+        <div class="item-name">${branch.name}</div>
+        <div class="item-desc">${branch.address}</div>
+        <div class="branch-info" style="margin-top:1rem; font-size:0.9rem; opacity:0.8;">
+           <span>${branch.isActive ? '🟢 Faol' : '🔴 Yopiq'}</span>
+        </div>
+      </div>
+    `).join('');
+    },
+
+    selectBranch(branchId) {
+        this.selectedBranch = branchId;
+        this.loadServices(branchId);
+        this.goToStep(3);
+    },
+
+    loadServices(branchId) {
+        const services = Database.getServices(branchId);
+        const grid = document.getElementById('services-grid');
+
+        if (services.length === 0) {
+            grid.innerHTML = '<p class="text-center">Xizmatlar topilmadi</p>';
+            return;
+        }
+
+        grid.innerHTML = services.map(service => `
+      <div class="service-item" id="service-${service.id}" onclick="QueueApp.selectService('${service.id}')">
+        <span class="item-icon">📋</span>
+        <div class="item-name">${service.name}</div>
+        <div class="item-desc">${service.nameUz || service.name}</div>
+        <div class="service-duration" style="margin-top:0.5rem; color:var(--primary-light);">
+          <span>⏱ ~${service.estimatedDuration} daqiqa</span>
+        </div>
+      </div>
+    `).join('');
+    },
+
+    async selectService(serviceId) {
+        this.selectedService = serviceId;
+
+        // Highlight selected service
+        document.querySelectorAll('.service-item').forEach(el => el.classList.remove('selected'));
+        document.getElementById(`service-${serviceId}`).classList.add('selected');
+
+        // Load staff for this service
+        await this.loadStaffForService(serviceId);
+
+        // Go to Staff Selection Step
+        this.goToStep(4);
+    },
+
+    async loadStaffForService(serviceId) {
+        const staffList = Database.getStaff().filter(s => s.services.includes(serviceId) && s.branchId === this.selectedBranch);
+        const staffGrid = document.getElementById('staff-grid');
+
+        if (staffList.length === 0) {
+            // No staff found, might auto-skip or show message
+            // For now, let user click "Any Staff" or valid logic:
+            staffGrid.innerHTML = '<p>Hozircha bo\'sh mutaxassislar yo\'q. "Istalgan mutaxassis" ni tanlang.</p>';
+            this.selectedStaff = 'anyone'; // Automatically select 'anyone' if no specific staff
+            return;
+        }
+
+        // --- Fetch Staff Load Logic ---
+        let staffLoads = {};
+        try {
+            const response = await fetch(`${CONFIG.api.verificationURL}/api/staff-load`);
+            const data = await response.json();
+            if (data.success) {
+                staffLoads = data.loads;
+            }
+        } catch (e) {
+            console.error("Failed to fetch staff load:", e);
+        }
+
+        // Find recommended staff (min load)
+        let minLoad = Infinity;
+        staffList.forEach(staff => {
+            const load = staffLoads[staff.id] || 0;
+            if (load < minLoad) minLoad = load;
+        });
+
+        // Mark recommended
+        const enhancedStaffList = staffList.map(staff => {
+            const load = staffLoads[staff.id] || 0;
+            return {
+                ...staff,
+                load,
+                isRecommended: load === minLoad
+            };
+        });
+
+        // Sort: Recommended first
+        enhancedStaffList.sort((a, b) => {
+            if (a.isRecommended && !b.isRecommended) return -1;
+            if (!a.isRecommended && b.isRecommended) return 1;
+            return 0;
+        });
+
+        staffGrid.innerHTML = enhancedStaffList.map(staff => `
+            <div class="staff-item ${staff.isRecommended ? 'recommended' : ''}" id="staff-${staff.id}" onclick="QueueApp.selectStaff('${staff.id}')">
+                ${staff.isRecommended ? '<div class="recommend-badge">⭐ Tavsiya etiladi</div>' : ''}
+                <div class="item-icon" style="font-size:3rem;">👨‍💼</div>
+                <div class="item-name">${staff.name}</div>
+                <div class="item-desc">${staff.counter || 'Mutaxassis'}</div>
+                <div class="staff-load" style="font-size:0.8rem; opacity:0.7; margin-top:0.5rem;">
+                   Navbatda: ${staff.load} kishi
+                </div>
+            </div>
+        `).join('');
+    },
+
+    selectStaff(staffId) {
+        this.selectedStaff = staffId;
+
+        // Visual feedback
+        document.querySelectorAll('.staff-item').forEach(el => el.classList.remove('selected'));
+        if (staffId !== 'anyone') {
+            const el = document.getElementById(`staff-${staffId}`);
+            if (el) el.classList.add('selected');
+        }
+
+        setTimeout(() => this.goToStep(5), 300); // Go to Date/Time
+    },
+
+    setupDateInput() {
+        const dateInput = document.getElementById('booking-date');
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.setAttribute('min', today);
+
+        dateInput.addEventListener('change', (e) => {
+            this.selectedDate = e.target.value;
+            this.loadTimeSlots(this.selectedDate);
+        });
+    },
+
+    loadTimeSlots(date) {
+        const timeSelection = document.getElementById('time-selection');
+        const slotsGrid = document.getElementById('time-slots');
+        timeSelection.classList.remove('hidden');
+
+        // Generate slots from 09:00 to 18:00
+        const slots = [];
+        for (let hour = 9; hour < 18; hour++) {
+            slots.push(`${hour.toString().padStart(2, '0')}:00`);
+            slots.push(`${hour.toString().padStart(2, '0')}:30`);
+        }
+
+        // Get already booked slots for this date, branch and staff
+        const bookings = Database.getQueues().filter(q =>
+            q.date === date &&
+            q.branchId === this.selectedBranch &&
+            (this.selectedStaff === 'anyone' || q.staffId === this.selectedStaff)
+        );
+        const bookedTimes = bookings.map(b => b.time);
+
+        slotsGrid.innerHTML = slots.map(time => {
+            const isBooked = bookedTimes.includes(time);
+            return `
+                <div class="time-slot ${isBooked ? 'disabled' : ''}" 
+                     onclick="${isBooked ? '' : `QueueApp.selectTime('${time}')`}"
+                     id="time-${time.replace(':', '')}">
+                    ${time}
+                </div>
+            `;
+        }).join('');
+    },
+
+    selectTime(time) {
+        this.selectedTime = time;
+        document.querySelectorAll('.time-slot').forEach(el => el.classList.remove('selected'));
+        document.getElementById(`time-${time.replace(':', '')}`).classList.add('selected');
+        document.getElementById('confirm-datetime').disabled = false;
+    },
+
+    proceedToVerification() {
+        this.goToStep(6);
+    },
+
+    setupCodeInputs() {
+        const inputs = document.querySelectorAll('.code-input');
+        inputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                if (e.target.value && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                    inputs[index - 1].focus();
+                }
+            });
+        });
+    },
+
+    async sendVerificationCode() {
+        const phone = document.getElementById('user-phone').value.replace(/\D/g, '');
+        if (!phone || phone.length < 9) {
+            Utils.showToast('Iltimos, to\'g\'ri telefon raqamini kiriting', 'error');
+            return;
+        }
+        this.userPhone = phone;
+        this.verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+        // Generate a random UID for this session to link with Telegram
+        if (!this.sessionUID) {
+            this.sessionUID = Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        Utils.showLoading('Telegram orqali kod yuborilmoqda...');
+        const linkContainer = document.getElementById('telegram-link-container');
+        if (linkContainer) {
+            linkContainer.classList.remove('hidden');
+            const botLink = document.getElementById('bot-link');
+            if (botLink) {
+                // Deep link formula: t.me/botname?start=COMMAND
+                botLink.href = `https://t.me/queuemanageruzbot?start=${this.sessionUID}`;
+                botLink.innerHTML = `Telegram Botni ochish`;
+            }
+        }
+
+        const statusEl = document.getElementById('polling-status');
+
+        try {
+            let chatId = localStorage.getItem(`chat_id_${phone}`);
+
+            // 1. Try Backend Lookup (Flask API)
+            if (!chatId) {
+                if (statusEl) statusEl.textContent = "Ma'lumotlar bazasidan qidirilmoqda...";
+                try {
+                    const lookupResp = await fetch(`${CONFIG.api.verificationURL}${CONFIG.api.endpoints.verify}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            phone: `+${phone}`,
+                            uid: this.sessionUID
+                        })
+                    });
+                    const lookupData = await lookupResp.json();
+                    if (lookupData.success) {
+                        chatId = lookupData.data.user_id;
+                        console.log('Backend match found:', chatId);
+
+                        // Auto-correct phone number if verified via Telegram
+                        if (lookupData.data.phone) {
+                            this.userPhone = lookupData.data.phone;
+                            const phoneInput = document.getElementById('user-phone');
+                            if (phoneInput && phoneInput.value !== this.userPhone) {
+                                phoneInput.value = this.userPhone;
+                                Utils.showToast('Raqamingiz Telegram orqali aniqlandi', 'success');
+                            }
+                        }
+
+                        // Save Verified User for Future (Persistence)
+                        localStorage.setItem('operator_user', JSON.stringify({
+                            phone: this.userPhone,
+                            chat_id: chatId,
+                            verified_at: new Date().toISOString()
+                        }));
+                    }
+                } catch (e) {
+                    console.warn('Backend lookup failed, falling back to polling:', e);
+                }
+            }
+
+            // 2. Fallback to Polling Discovery
+            if (!chatId) {
+                // Poll for 30 seconds (15 attempts * 2 seconds)
+                let attempts = 0;
+                while (attempts < 15 && !chatId) {
+                    if (statusEl) statusEl.textContent = `Sizni botdan qidirmoqdamiz (Urinish ${attempts + 1}/15)...`;
+                    chatId = await this.findChatIdByUID(this.sessionUID, phone);
+                    if (!chatId) {
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        attempts++;
+                    }
+                }
+            }
+
+            if (chatId) {
+                localStorage.setItem(`chat_id_${phone}`, chatId);
+                if (statusEl) statusEl.textContent = "Siz topildingiz! Kod yuborilmoqda...";
+
+                const message = `Sizning tasdiqlash kodingiz: ${this.verificationCode}`;
+                const url = `https://api.telegram.org/bot${CONFIG.notifications.telegram.botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
+
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.ok) {
+                    Utils.showToast('Tasdiqlash kodi Telegramga yuborildi!', 'success');
+                    document.getElementById('phone-entry').classList.add('hidden');
+                    document.getElementById('code-entry').classList.remove('hidden');
+                } else {
+                    throw new Error(result.description);
+                }
+            } else {
+                Utils.showToast('Sizni topa olmadik. Iltimos botni oching va "Start" tugmasini bosing.', 'warning');
+                if (statusEl) statusEl.textContent = "Sizni topa olmadik. Botni ochib 'Start' tugmasini bosing.";
+                const manualBtn = document.getElementById('manual-id-btn');
+                if (manualBtn) manualBtn.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('Telegram Error:', error);
+            Utils.showToast('Telegram xatosi: ' + error.message, 'error');
+        } finally {
+            Utils.hideLoading();
+        }
+    },
+
+    manualChatId() {
+        const id = prompt("Telegram Chat ID ni kiriting (Botga /id deb yozing):");
+        if (id) {
+            localStorage.setItem(`chat_id_${this.userPhone}`, id);
+            this.sendVerificationCode();
+        }
+    },
+
+    /**
+     * Attempts to find a Chat ID by Session UID or phone number
+     */
+    async findChatIdByUID(uid, phone) {
+        try {
+            const url = `https://api.telegram.org/bot${CONFIG.notifications.telegram.botToken}/getUpdates?limit=50`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.ok) {
+                const searchPhone = phone.slice(-9);
+                const updates = data.result.reverse();
+
+                for (const update of updates) {
+                    const msg = update.message || update.edited_message;
+                    if (!msg) continue;
+
+                    // 1. Check for Deep Link (/start UID)
+                    if (msg.text && msg.text.includes(uid)) {
+                        return msg.from.id;
+                    }
+
+                    // 2. Check for Phone Number in text
+                    if (msg.text) {
+                        const text = msg.text.replace(/\D/g, '');
+                        if (text.includes(searchPhone)) return msg.from.id;
+                    }
+
+                    // 3. Check for Contact sharing
+                    if (msg.contact && msg.contact.phone_number) {
+                        const contactPhone = msg.contact.phone_number.replace(/\D/g, '');
+                        if (contactPhone.includes(searchPhone)) return msg.from.id;
+                    }
+                }
+            }
+            return null;
+        } catch (e) {
+            console.error('findChatIdByUID error:', e);
+            return null;
+        }
+    },
+
+    verifyCode() {
+        const inputs = document.querySelectorAll('.code-input');
+        let code = '';
+        inputs.forEach(input => code += input.value);
+
+        if (code === this.verificationCode) {
+            this.createQueue();
+        } else {
+            Utils.showToast('Noto\'g\'ri kod kiritildi', 'error');
+        }
+    },
+
+    createQueue() {
+        Utils.showLoading('Bron qilinmoqda...');
+
+        setTimeout(() => {
+            const queueData = {
+                branchId: this.selectedBranch,
+                serviceId: this.selectedService,
+                staffId: this.selectedStaff === 'anyone' ? null : this.selectedStaff,
+                date: this.selectedDate,
+                time: this.selectedTime,
+                customerInfo: {
+                    phone: this.userPhone
+                }
+            };
+
+            const queue = Database.createQueue(queueData);
+
+            if (queue) {
+                this.currentQueue = queue;
+
+                // Sync with backend for automated notifications
+                fetch(`${CONFIG.api.verificationURL}/api/queues`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: queue.id,
+                        phone: this.userPhone,
+                        number: queue.queueNumber,
+                        status: queue.status,
+                        date: queue.date,
+                        time: queue.time
+                    })
+                }).catch(err => console.error('Sync failed:', err));
+
+                // Redirect to Ticket Page instead of tracker
+                setTimeout(() => {
+                    window.location.href = `ticket.html?id=${queue.id}`;
+                }, 1500);
+            } else {
+                Utils.showToast('Xatolik yuz berdi', 'error');
+            }
+
+            Utils.hideLoading();
+        }, 1000);
+    },
+
+    displayTicket(queue) {
+        const org = Database.getOrganization(this.selectedOrg);
+        const branch = Database.getBranch(queue.branchId);
+        const service = Database.getService(queue.serviceId);
+        const staff = queue.staffId ? Database.getStaffMember(queue.staffId) : null;
+
+        document.getElementById('ticket-org').textContent = org.name;
+        document.getElementById('ticket-branch').textContent = branch.name;
+        document.getElementById('ticket-number').textContent = queue.queueNumber;
+        document.getElementById('ticket-service').textContent = service.name;
+        document.getElementById('ticket-staff').textContent = staff ? staff.name : 'Istalgan mutaxassis';
+        document.getElementById('ticket-time').textContent = queue.time;
+        document.getElementById('ticket-date').textContent = queue.date;
+
+        const qrCode = Utils.generateQRCode(queue.id);
+        document.getElementById('ticket-qr-code').src = qrCode;
+    },
+
+    startRealTimeUpdates() {
+        QueueManager.subscribe(() => {
+            // Real-time updates logic if needed
+        });
+    },
+
+    printTicket() {
+        if (this.currentQueue) {
+            QueueManager.printTicket(this.currentQueue.id);
+        }
+    },
+
+    reset() {
+        location.reload(); // Simplest way to reset the whole app state
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    QueueApp.init();
+});
