@@ -587,7 +587,34 @@
         font-weight: 700;
         background: var(--primary-gradient);
         -webkit-background-clip: text;
+        background-clip: text;
         -webkit-text-fill-color: transparent;
+    }
+
+    .mobile-only-actions .language-switcher {
+        display: flex;
+        gap: 1rem;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 0.5rem;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .mobile-only-actions .lang-btn {
+        background: transparent;
+        border: none;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .mobile-only-actions .lang-btn.active {
+        background: var(--primary-color);
+        box-shadow: var(--glow-primary);
     }
 
     /* Show actions inside menu on mobile */
