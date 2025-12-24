@@ -326,7 +326,7 @@ def chat_ai():
             docs = ", ".join(service.get('required_documents', []))
             context += f"- {service['name']}: Kerakli hujjatlar: {docs}. Narxi: {service.get('price')}. Vaqt: {service.get('process_time')}.\n"
             
-        context += "\nJavob berish uslubi: Qisqa, londa va xushmuomala bo'ling. Faqat bor ma'lumotga asoslaning. Agar so'ralgan ma'lumot yo'q bo'lsa, 'Uzr, bu haqida ma'lumotim yo'q' deng.\n"
+        context += "\nJavob berish uslubi: Qisqa, londa va xushmuomala bo'ling. Faqat bor ma'lumotga asoslaning. Agar suhbat allaqachon boshlangan bo'lsa (context yoki tarixdan ko'rinib tursa), QAYTA SALOMLASHISH SHART EMAS. Darhol savolga javob bering. Agar so'ralgan ma'lumot yo'q bo'lsa, 'Uzr, bu haqida ma'lumotim yo'q' deng.\n"
 
         # Add User Queue Context
         if queue_id:

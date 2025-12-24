@@ -43,7 +43,7 @@
 .nav-menu {
     display: flex;
     align-items: center;
-    gap: 3rem;
+    gap: 1.5rem;
 }
 
 .nav-link {
@@ -154,8 +154,8 @@
 }
 
 .hero-title {
-    font-size: 7rem;
-    line-height: 1.05;
+    font-size: 5rem;
+    line-height: 1.1;
     margin-bottom: 2rem;
     font-weight: 800;
     letter-spacing: -0.03em;
@@ -514,7 +514,8 @@
     }
 
     .hero-title {
-        font-size: 3.5rem;
+        font-size: 2.5rem;
+        line-height: 1.2;
     }
 
     .hero-subtitle {
@@ -545,7 +546,8 @@
     }
 
     .hero-title {
-        font-size: 2.75rem;
+        font-size: 2rem;
+        word-break: break-word;
     }
 
     .cta-title {

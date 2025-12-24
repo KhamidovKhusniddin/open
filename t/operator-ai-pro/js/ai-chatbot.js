@@ -82,17 +82,19 @@ const AIChatbot = {
         }
     },
 
+    initialized: false,
+
     /**
      * Initialize chatbot
      */
     init() {
+        if (this.initialized) return;
+        this.initialized = true;
+
         this.createChatWidget();
         this.loadChatHistory();
     },
 
-    /**
-     * Create chat widget UI
-     */
     /**
      * Create chat widget UI
      */
