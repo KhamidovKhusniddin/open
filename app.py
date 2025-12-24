@@ -19,6 +19,7 @@ CORS(app) # Enable CORS for Netlify
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
 if not BOT_TOKEN or not GEMINI_API_KEY:
     print("Warning: BOT_TOKEN or GEMINI_API_KEY not found in environment")
@@ -29,6 +30,14 @@ model = genai.GenerativeModel('gemini-flash-latest')
 
 # Initialize DB
 database.init_db()
+
+@app.route('/api/admin/login', methods=['POST'])
+def admin_login():
+    data = request.json
+    password = data.get('password')
+    if password == ADMIN_PASSWORD:
+        return jsonify({"success": True})
+    return jsonify({"success": False, "message": "Invalid password"}), 401
 
 @app.route('/')
 def serve_index():

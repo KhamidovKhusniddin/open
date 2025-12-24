@@ -16,7 +16,35 @@
 </head>
 
 <body>
-    <div class="admin-layout">
+    <!-- Login Overlay -->
+    <div id="login-overlay"
+        style="position: fixed; inset: 0; background: #020617; z-index: 10000; display: flex; align-items: center; justify-content: center;">
+        <div class="card card-glass" style="width: 100%; max-width: 400px; text-align: center; padding: 3rem;">
+            <div style="font-size: 3.5rem; margin-bottom: 1.5rem;">🔒</div>
+            <h2 style="margin-bottom: 2rem; font-family: var(--font-display); color: white;">Admin Panelga Kirish</h2>
+
+            <div style="text-align: left; margin-bottom: 1.5rem;">
+                <label
+                    style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">Parolni
+                    kiriting</label>
+                <input type="password" id="admin-password" placeholder="••••••••"
+                    style="width: 100%; padding: 1rem; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: white; outline: none; transition: border-color 0.3s;"
+                    onfocus="this.style.borderColor='var(--primary-color)'"
+                    onblur="this.style.borderColor='var(--glass-border)'">
+            </div>
+
+            <button id="login-btn" class="btn btn-primary w-full" style="padding: 1rem;">
+                <i class="fas fa-sign-in-alt"></i> Kirish
+            </button>
+            <p id="login-error"
+                style="color: var(--error-color); margin-top: 1.5rem; display: none; font-size: 0.875rem;">
+                ⚠️ Parol noto'g'ri! Qayta urinib ko'ring.
+            </p>
+        </div>
+    </div>
+
+    <!-- Hidden Main Layout -->
+    <div class="admin-layout" id="admin-layout" style="display: none;">
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="brand">
@@ -38,6 +66,11 @@
                     <span class="role">Operator</span>
                 </div>
             </div>
+
+            <button onclick="logoutAdmin()" class="btn btn-outline"
+                style="width: calc(100% - 4rem); margin: 2rem; padding: 0.75rem; font-size: 0.875rem; border-color: rgba(255,255,255,0.1);">
+                <i class="fas fa-sign-out-alt"></i> Chiqish
+            </button>
         </aside>
 
         <!-- Main Content -->
@@ -82,7 +115,8 @@
                         <h2>Hozir Xizmat Ko'rsatilyapti</h2>
                         <div class="big-number" id="current-number">---</div>
                         <div class="controls">
-                            <button class="btn btn-success" id="btn-complete"><i class="fas fa-check"></i> Tugatish</button>
+                            <button class="btn btn-success" id="btn-complete"><i class="fas fa-check"></i>
+                                Tugatish</button>
                             <button class="btn btn-warning" id="btn-recall"><i class="fas fa-bell"></i> Qayta
                                 Chaqirish</button>
                             <button class="btn btn-danger" id="btn-noshow"><i class="fas fa-times"></i> Kelmadi</button>
@@ -125,25 +159,24 @@
             <!-- View: Queues (Detailed) -->
             <div id="view-queues" class="view-section hidden">
                 <h2>Barcha Navbatlar</h2>
-                <div class="card">
-                     <p>Bu bo'limda barcha faol navbatlar ro'yxati va boshqaruvi bo'ladi.</p>
-                     <!-- Future: Add filtering, search, and full list here -->
+                <div class="card card-glass">
+                    <p>Bu bo'limda barcha faol navbatlar ro'yxati va boshqaruvi bo'ladi.</p>
                 </div>
             </div>
 
             <!-- View: History -->
             <div id="view-history" class="view-section hidden">
                 <h2>Tarix</h2>
-                 <div class="card">
-                     <p>Bu bo'limda xizmat ko'rsatish tarixi va hisobotlar bo'ladi.</p>
+                <div class="card card-glass">
+                    <p>Bu bo'limda xizmat ko'rsatish tarixi va hisobotlar bo'ladi.</p>
                 </div>
             </div>
 
             <!-- View: Settings -->
             <div id="view-settings" class="view-section hidden">
                 <h2>Sozlamalar</h2>
-                 <div class="card">
-                     <form id="settings-form">
+                <div class="card card-glass">
+                    <form id="settings-form">
                         <div class="form-group">
                             <label>Tashkilot Nomi</label>
                             <input type="text" class="form-control" value="Operator AI Demo">
@@ -156,7 +189,7 @@
                             </div>
                         </div>
                         <button type="button" class="btn btn-primary mt-xl">Saqlash</button>
-                     </form>
+                    </form>
                 </div>
             </div>
         </main>

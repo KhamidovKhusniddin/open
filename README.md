@@ -61,5 +61,24 @@ git push -u origin main
 
 ---
 
+## 🚀 Internetga joylash (Deploy)
+
+⚠️ **Muhim:** Bu loyiha **Python (Flask)** va **SQLite** ishlatgani uchun, oddiy **Netlify** yoki **Vercel** da to'liq ishlamaydi (ular asosan frontend uchun).
+
+### Tavsiya etilgan platformalar:
+1.  **PythonAnywhere** (Eng oson, bepul varianti bor):
+    *   Python va SQLite uchun ideal.
+    *   Console orqali repo-ni klonlaysiz va `app.py` ni ishga tushirasiz.
+2.  **Render.com** (Web Service):
+    *   GitHub-ga ulanadi.
+    *   `Build Command`: `pip install -r requirements.txt`
+    *   `Start Command`: `gunicorn app:app` (buning uchun `gunicorn` o'rnatish kerak)
+
+### Agar baribir Netlify ishlatmoqchi bo'lsangiz:
+Faqat **Frontend** (dizayn) ishlaydi. Backend (navbat olish, admin) ishlamaydi.
+*   **Publish directory:** `t/operator-ai-pro`
+
+---
+
 ## 🛡 Xavfsizlik
 Ushbu loyiha `.env` faylidan foydalanadi. **HECH QACHON** `.env` faylini, `queue_system.db` ni yoki `__pycache__` papkalarini git-ga yuklamang (ular `.gitignore` da yozilgan).
