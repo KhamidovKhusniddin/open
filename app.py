@@ -118,15 +118,27 @@ def handle_contact(message):
 @app.route('/api/admin/login', methods=['POST'])
 def admin_login():
     data = request.json
-    phone = data.get('phone')
-    password = data.get('password')
+    phone = data.get('phone', '').strip()
+    password = data.get('password', '').strip()
+    print(f"Login attempt: phone='{phone}', password_length={len(password) if password else 0}")
+    
+    import sys
+    print(f"Login attempt: phone='{phone}'", file=sys.stderr)
     
     if not phone or not password:
         return jsonify({"success": False, "message": "Phone and password required"}), 400
         
+    # Standard check
     admin = database.get_admin_user(phone)
+    
+    # If not found, try case-insensitive for alphanumeric usernames
+    if not admin and any(c.isalpha() for c in phone):
+        conn = database.get_db_connection()
+        user = conn.execute('SELECT * FROM users WHERE LOWER(phone) = LOWER(?) AND role = "admin"', (phone,)).fetchone()
+        conn.close()
+        if user: admin = dict(user)
+
     if admin and bcrypt.check_password_hash(admin['password_hash'], password):
-        # Include role in identity if needed, or just phone
         access_token = create_access_token(identity=phone)
         return jsonify({"success": True, "token": access_token})
         
