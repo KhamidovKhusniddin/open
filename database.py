@@ -152,10 +152,12 @@ def update_notification_level(queue_id, level):
 # --- User Operations ---
 
 def normalize_phone(phone):
-    """Ensure phone is in +998XXXXXXXXX format or consistent +..."""
+    """Ensure phone is in +998XXXXXXXXX format, but allow alphanumeric usernames."""
+    if any(c.isalpha() for c in phone):
+        return phone # Treat as username
+        
     digits = "".join(filter(str.isdigit, phone))
     if not phone.startswith('+'):
-        # Assume UZ if it's 9 digits or starts with 998
         if len(digits) == 9:
             return "+998" + digits
         return "+" + digits

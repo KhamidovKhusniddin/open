@@ -17,8 +17,8 @@ def run_migrations():
     database.init_db()
     
     # 2. Add default admin if not exists
-    admin_phone = "+998990000000" # Example admin phone
-    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+    admin_phone = "Xamidov" # Example admin phone
+    admin_password = os.getenv("ADMIN_PASSWORD", "Xusniddin1212121")
     hashed_pw = bcrypt.generate_password_hash(admin_password).decode('utf-8')
     
     conn = database.get_db_connection()
