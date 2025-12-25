@@ -345,5 +345,5 @@ def notification_scheduler():
 
 if __name__ == '__main__':
     threading.Thread(target=notification_scheduler, daemon=True).start()
-    threading.Thread(target=bot.infinity_polling, daemon=True).start()
+    # threading.Thread(target=bot.infinity_polling, daemon=True).start()
     socketio.run(app, debug=False, port=5000, host='0.0.0.0', allow_unsafe_werkzeug=True)
