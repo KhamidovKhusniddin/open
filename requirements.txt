@@ -10,3 +10,5 @@ flask-bcrypt
 PyJWT
 bcrypt
 flask-socketio
+eventlet
+gunicorn

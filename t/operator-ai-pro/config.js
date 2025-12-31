@@ -64,9 +64,8 @@ const CONFIG = {
             provider: 'smtp'
         },
         telegram: {
-            enabled: true,
-            botToken: '8543659841:AAHxmtGHGn0h1wKJtv1fVWIUmwcWfKwMWiU',
-            adminChatId: 'YOUR_CHAT_ID' // Ideally this would be dynamic, but we can store a default for testing
+            enabled: true
+            // Token moved to backend for security
         }
     },
 

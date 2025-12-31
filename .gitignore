@@ -7,5 +7,5 @@ venv/
 queue_system.db
 verifications.json
 queues.json
-t/operator-ai-pro/js/database.js # Mock data file, usually local
-t/operator-ai-pro/config.js # Contains frontend secrets (Runtime insecure, but at least git-safe)
+# t/operator-ai-pro/js/database.js 
+# t/operator-ai-pro/config.js

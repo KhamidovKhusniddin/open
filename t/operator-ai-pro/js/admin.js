@@ -38,6 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (data.success && data.token) {
                 localStorage.setItem('admin_token', data.token);
+                if (data.user) {
+                    localStorage.setItem('admin_user', JSON.stringify(data.user));
+                }
                 showDashboard();
             } else {
                 loginError.style.display = 'block';
@@ -109,9 +112,37 @@ document.addEventListener('DOMContentLoaded', () => {
                     fetchAnalytics();
                 } else if (viewName === 'navbatlar') {
                     document.getElementById('view-queues').classList.remove('hidden');
+                } else if (viewName === 'tashkilotlar') {
+                    document.getElementById('view-organizations').classList.remove('hidden');
+                    fetchOrganizations();
+                } else if (viewName === 'adminlar') {
+                    document.getElementById('view-admins').classList.remove('hidden');
+                    fetchOrgsForSelect();
+                } else if (viewName === 'sozlamalar') {
+                    document.getElementById('view-settings').classList.remove('hidden');
+                    const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
+                    if (user.role === 'org_admin') {
+                        fetchOrgSettings();
+                        fetchOrgServices();
+                    }
                 }
             });
         });
+
+        // Check Role & Show Admin Items
+        const userStr = localStorage.getItem('admin_user');
+        if (userStr) {
+            const user = JSON.parse(userStr);
+            if (user.role === 'system_admin') {
+                document.querySelectorAll('.super-admin-only').forEach(el => el.classList.remove('hidden'));
+            }
+
+            // Update Profile Name
+            const profileName = document.querySelector('.user-profile .name');
+            const profileRole = document.querySelector('.user-profile .role');
+            if (profileName) profileName.textContent = user.phone;
+            if (profileRole) profileRole.textContent = user.role === 'system_admin' ? 'Super Admin' : 'Admin';
+        }
 
         // --- Analytics Chart Logic ---
         let hourlyChart = null;
@@ -333,7 +364,221 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.logoutAdmin = () => {
             localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_user');
             location.reload();
+        };
+
+        // --- SuperAdmin Functions ---
+
+        async function fetchOrganizations() {
+            const tableBody = document.getElementById('org-table-body');
+            tableBody.innerHTML = '<tr><td colspan="4">Yuklanmoqda...</td></tr>';
+
+            try {
+                const resp = await secureFetch('/api/super/organizations');
+                if (!resp) return;
+                const data = await resp.json();
+
+                tableBody.innerHTML = '';
+                if (data.success && data.organizations) {
+                    data.organizations.forEach(org => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${org.id}</td>
+                            <td>${org.name}</td>
+                            <td><span class="badge serving">${org.license_status}</span></td>
+                            <td>${new Date(org.created_at).toLocaleDateString()}</td>
+                        `;
+                        tableBody.appendChild(tr);
+                    });
+                }
+            } catch (e) {
+                console.error(e);
+                tableBody.innerHTML = '<tr><td colspan="4" style="color:red">Xatolik</td></tr>';
+            }
+        }
+
+        window.openAddOrgModal = async () => {
+            const name = prompt("Tashkilot nomini kiriting:");
+            if (!name) return;
+
+            try {
+                const resp = await secureFetch('/api/super/organizations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                if (!resp) return;
+                const data = await resp.json();
+                if (data.success) {
+                    alert(`Tashkilot yaratildi! ID: ${data.org_id}`);
+                    fetchOrganizations();
+                } else {
+                    alert("Xatolik: " + data.message);
+                }
+            } catch (e) { alert("Xatolik"); }
+        };
+
+        async function fetchOrgsForSelect() {
+            const select = document.getElementById('new-admin-org');
+            try {
+                const resp = await secureFetch('/api/super/organizations');
+                if (!resp) return;
+                const data = await resp.json();
+
+                select.innerHTML = '<option value="">Tanlang...</option>';
+                if (data.success && data.organizations) {
+                    data.organizations.forEach(org => {
+                        const opt = document.createElement('option');
+                        opt.value = org.id;
+                        opt.textContent = org.name;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // Create Admin Form Handler
+        const createAdminForm = document.getElementById('create-admin-form');
+        if (createAdminForm) {
+            createAdminForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const phone = document.getElementById('new-admin-phone').value;
+                const password = document.getElementById('new-admin-password').value;
+                const role = document.getElementById('new-admin-role').value;
+                const org_id = document.getElementById('new-admin-org').value;
+
+                if (!phone || !password) return alert("Ma'lumotlar yetarli emas");
+
+                try {
+                    const resp = await secureFetch('/api/super/create-admin', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone, password, role, org_id })
+                    });
+                    if (!resp) return;
+                    const data = await resp.json();
+
+                    if (data.success) {
+                        alert("Admin muvaffaqiyatli yaratildi!");
+                        createAdminForm.reset();
+                    } else {
+                        alert("Xatolik: " + data.message);
+                    }
+                } catch (e) {
+                    console.error('Create admin error:', e);
+                    alert("Xatolik yuz berdi");
+                }
+            });
+        }
+
+        // --- Org Admin Functions ---
+
+        async function fetchOrgSettings() {
+            try {
+                const resp = await secureFetch('/api/org/settings');
+                if (!resp) return;
+                const data = await resp.json();
+                if (data.success && data.org) {
+                    const nameInput = document.getElementById('setting-org-name');
+                    if (nameInput) nameInput.value = data.org.name || '';
+                }
+            } catch (e) { console.error('Fetch settings error:', e); }
+        }
+
+        const orgSettingsForm = document.getElementById('org-settings-form');
+        if (orgSettingsForm) {
+            orgSettingsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const nameInput = document.getElementById('setting-org-name');
+                if (!nameInput) return;
+                const name = nameInput.value;
+                try {
+                    const resp = await secureFetch('/api/org/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name })
+                    });
+                    if (!resp) return;
+                    const result = await resp.json();
+                    if (result.success) alert("Tashkilot nomi yangilandi!");
+                    else alert("Xatolik: " + result.message);
+                } catch (e) { alert("Xatolik"); }
+            });
+        }
+
+        async function fetchOrgServices() {
+            const tbody = document.getElementById('services-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="3">Yuklanmoqda...</td></tr>';
+            try {
+                const resp = await secureFetch('/api/org/services');
+                if (!resp) {
+                    tbody.innerHTML = '<tr><td colspan="3">Avtorizatsiya xatosi</td></tr>';
+                    return;
+                }
+                const data = await resp.json();
+                if (data.success && data.services) {
+                    tbody.innerHTML = '';
+                    if (data.services.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="3">Xizmatlar yo\'q</td></tr>';
+                        return;
+                    }
+                    data.services.forEach(svc => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${svc.name_uz}</td>
+                            <td>${svc.estimated_duration}</td>
+                            <td>
+                                <button class="btn btn-danger btn-sm" onclick="deleteService('${svc.id}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3">Xatolik: ' + (data.message || 'Ma\'lumot topilmadi') + '</td></tr>';
+                }
+            } catch (e) {
+                console.error('Fetch services error:', e);
+                tbody.innerHTML = '<tr><td colspan="3">Tizimda xatolik</td></tr>';
+            }
+        }
+
+        window.openAddServiceModal = async () => {
+            const name = prompt("Xizmat nomini kiriting (masalan: Kredit bo'limi):");
+            if (!name) return;
+            const durationInput = prompt("O'rtacha xizmat vaqti (daqiqada):", "15");
+            if (!durationInput) return;
+            const duration = parseInt(durationInput);
+
+            try {
+                const resp = await secureFetch('/api/org/services', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, duration })
+                });
+                if (!resp) return;
+                const data = await resp.json();
+                if (data.success) {
+                    alert("Xizmat qo'shildi!");
+                    fetchOrgServices();
+                } else alert("Xatolik: " + data.message);
+            } catch (e) { alert("Xatolik"); }
+        };
+
+        window.deleteService = async (id) => {
+            if (!confirm("Haqiqatan ham ushbu xizmatni o'chirmoqchimisiz?")) return;
+            try {
+                const resp = await secureFetch(`/api/org/services?id=${id}`, { method: 'DELETE' });
+                if (!resp) return;
+                const data = await resp.json();
+                if (data.success) {
+                    alert("Xizmat o'chirildi.");
+                    fetchOrgServices();
+                } else alert("Xatolik");
+            } catch (e) { alert("Xatolik"); }
         };
     }
 });

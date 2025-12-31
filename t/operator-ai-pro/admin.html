@@ -66,6 +66,13 @@
                 <a href="#" class="nav-item"><i class="fas fa-chart-line"></i> Analitika</a>
                 <a href="#" class="nav-item"><i class="fas fa-list-ol"></i> Navbatlar</a>
                 <a href="#" class="nav-item"><i class="fas fa-history"></i> Tarix</a>
+
+                <!-- SuperAdmin Menu -->
+                <a href="#" class="nav-item super-admin-only hidden" id="nav-orgs"><i class="fas fa-building"></i>
+                    Tashkilotlar</a>
+                <a href="#" class="nav-item super-admin-only hidden" id="nav-admins"><i class="fas fa-user-shield"></i>
+                    Adminlar</a>
+
                 <a href="#" class="nav-item"><i class="fas fa-cog"></i> Sozlamalar</a>
             </nav>
 
@@ -207,27 +214,97 @@
                 </div>
             </div>
 
+            <!-- View: SuperAdmin Organizations -->
+            <div id="view-organizations" class="view-section hidden">
+                <header class="top-bar" style="justify-content: space-between;">
+                    <h1>Tashkilotlar</h1>
+                    <button class="btn btn-primary" onclick="openAddOrgModal()"><i class="fas fa-plus"></i> Yangi
+                        Tashkilot</button>
+                </header>
+                <div class="card card-glass mt-xl">
+                    <table class="queue-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nomi</th>
+                                <th>Holati</th>
+                                <th>Yaratilgan sana</th>
+                            </tr>
+                        </thead>
+                        <tbody id="org-table-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- View: SuperAdmin Admins -->
+            <div id="view-admins" class="view-section hidden">
+                <h2>Admin Yaratish</h2>
+                <div class="card card-glass" style="max-width: 500px">
+                    <form id="create-admin-form">
+                        <div class="form-group">
+                            <label>Telefon Raqam</label>
+                            <input type="text" id="new-admin-phone" class="form-control" placeholder="+99890..."
+                                required>
+                        </div>
+                        <div class="form-group mt-md">
+                            <label>Parol</label>
+                            <input type="text" id="new-admin-password" class="form-control"
+                                placeholder="Parol o'ylab toping" required>
+                        </div>
+                        <div class="form-group mt-md">
+                            <label>Rol</label>
+                            <select id="new-admin-role" class="form-control">
+                                <option value="org_admin">Tashkilot Admini</option>
+                                <option value="system_admin">Super Admin</option>
+                            </select>
+                        </div>
+                        <div class="form-group mt-md" id="org-select-group">
+                            <label>Tashkilotni Tanlang</label>
+                            <select id="new-admin-org" class="form-control">
+                                <!-- Populated by JS -->
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-xl" style="width: 100%">Yaratish</button>
+                    </form>
+                </div>
+            </div>
+
             <!-- View: Settings -->
             <div id="view-settings" class="view-section hidden">
                 <h2>Sozlamalar</h2>
                 <div class="card card-glass">
-                    <form id="settings-form">
+                    <h3>🏢 Tashkilot Sozlamalari</h3>
+                    <form id="org-settings-form">
                         <div class="form-group">
                             <label>Tashkilot Nomi</label>
-                            <input type="text" class="form-control" value="Operator AI Demo">
+                            <input type="text" id="setting-org-name" class="form-control" placeholder="Tashkilot nomi">
                         </div>
-                        <div class="form-group" style="margin-top: 1rem;">
-                            <label>Ish Vaqti</label>
-                            <div style="display: flex; gap: 1rem;">
-                                <input type="time" class="form-control" value="09:00">
-                                <input type="time" class="form-control" value="18:00">
-                            </div>
-                        </div>
-                        <button type="button" class="btn btn-primary mt-xl">Saqlash</button>
+                        <button type="submit" class="btn btn-primary mt-md">Saqlash</button>
                     </form>
+
+                    <h3 class="mt-xl">📋 Xizmatlar (Bo'limlar)</h3>
+                    <div style="margin-bottom: 1rem; text-align: right;">
+                        <button class="btn btn-success" onclick="openAddServiceModal()"><i class="fas fa-plus"></i>
+                            Yangi Xizmat</button>
+                    </div>
+                    <table class="queue-table">
+                        <thead>
+                            <tr>
+                                <th>Nomi</th>
+                                <th>Davomiyligi (daq)</th>
+                                <th>Amallar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="services-table-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </main>
+    </div>
+    </main>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>

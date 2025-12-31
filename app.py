@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
 from flask_bcrypt import Bcrypt
 from flask_socketio import SocketIO, emit
 import os
@@ -24,7 +24,10 @@ app = Flask(__name__, static_url_path='', static_folder='t/operator-ai-pro')
 CORS(app) 
 
 # Security Setup
-app.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY", "super-secret-key-123")
+app.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY")
+if not app.config['JWT_SECRET_KEY']:
+    # FAIL-SECURE: Do not start if secret is missing
+    raise RuntimeError("CRITICAL SECURITY ERROR: JWT_SECRET_KEY is not set in .env file. Please set it to a strong random string.")
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
@@ -33,8 +36,10 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-if not BOT_TOKEN or not GEMINI_API_KEY:
-    print("Warning: BOT_TOKEN or GEMINI_API_KEY not found in environment")
+if not BOT_TOKEN:
+    raise RuntimeError("CRITICAL SECURITY ERROR: BOT_TOKEN is not set in .env file.")
+if not GEMINI_API_KEY:
+    raise RuntimeError("CRITICAL SECURITY ERROR: GEMINI_API_KEY is not set in .env file.")
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-flash-latest')
@@ -51,6 +56,20 @@ DATA_FILE = "verifications.json"
 
 # Initialize DB
 database.init_db()
+
+# --- RBAC Helpers ---
+from functools import wraps
+def role_required(roles):
+    def decorator(f):
+        @wraps(f)
+        @jwt_required()
+        def decorated_function(*args, **kwargs):
+            claims = get_jwt()
+            if claims.get("role") not in roles:
+                return jsonify({"success": False, "message": "Ruxsat berilmagan"}), 403
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 # --- Bot Handlers ---
 
@@ -113,11 +132,23 @@ def handle_contact(message):
         
         bot.send_message(message.chat.id, "✅ Rahmat! Raqamingiz tasdiqlandi.", reply_markup=types.ReplyKeyboardRemove())
 
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    # Security Policy
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.socket.io https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data: https://cdnjs.cloudflare.com; connect-src 'self'; img-src 'self' data:;"
+    return response
+
 # --- Flask Routes ---
 
 @app.route('/api/admin/login', methods=['POST'])
 def admin_login():
     data = request.json
+    # 1. Anti-Brute-Force: Artificial Delay
+    time.sleep(1.0) 
+    
     phone = data.get('phone', '').strip()
     password = data.get('password', '').strip()
     print(f"Login attempt: phone='{phone}', password_length={len(password) if password else 0}")
@@ -134,19 +165,109 @@ def admin_login():
     # If not found, try case-insensitive for alphanumeric usernames
     if not admin and any(c.isalpha() for c in phone):
         conn = database.get_db_connection()
-        user = conn.execute('SELECT * FROM users WHERE LOWER(phone) = LOWER(?) AND role = "admin"', (phone,)).fetchone()
+        user = conn.execute('SELECT * FROM users WHERE LOWER(phone) = LOWER(?) AND role IN ("admin", "system_admin", "org_admin", "staff")', (phone,)).fetchone()
         conn.close()
         if user: admin = dict(user)
 
     if admin and bcrypt.check_password_hash(admin['password_hash'], password):
-        access_token = create_access_token(identity=phone)
-        return jsonify({"success": True, "token": access_token})
+        # Create token with additional claims for RBAC
+        access_token = create_access_token(
+            identity=phone,
+            additional_claims={
+                "role": admin['role'],
+                "org_id": admin.get('org_id'),
+                "branch_id": admin.get('branch_id')
+            }
+        )
+        return jsonify({
+            "success": True, 
+            "token": access_token,
+            "user": {
+                "phone": admin['phone'],
+                "role": admin['role'],
+                "org_id": admin.get('org_id')
+            }
+        })
         
     return jsonify({"success": False, "message": "Noto'g'ri login yoki parol"}), 401
+
+# --- SuperAdmin Routes ---
+
+@app.route('/api/super/organizations', methods=['GET', 'POST'])
+@role_required(['system_admin', 'admin']) # 'admin' kept for legacy/compatibility
+def super_organizations():
+    if request.method == 'POST':
+        data = request.json
+        name = data.get('name')
+        if not name: return jsonify({"success": False, "message": "Nomi kiritilmadi"}), 400
+        org_id = database.add_organization(name)
+        return jsonify({"success": True, "org_id": org_id})
+    return jsonify({"success": True, "organizations": database.get_organizations()})
+
+@app.route('/api/super/branches', methods=['POST'])
+@role_required(['system_admin', 'admin', 'org_admin'])
+def super_add_branch():
+    data = request.json
+    org_id = data.get('org_id')
+    name = data.get('name')
+    address = data.get('address')
+    
+    # IDOR check for org_admin
+    claims = get_jwt()
+    if claims.get('role') == 'org_admin' and str(org_id) != str(claims.get('org_id')):
+        return jsonify({"success": False, "message": "Ruxsat yo'q"}), 403
+        
+    if not org_id or not name: return jsonify({"success": False, "message": "Ma'lumotlar yetarli emas"}), 400
+    branch_id = database.add_branch(org_id, name, address)
+    return jsonify({"success": True, "branch_id": branch_id})
+
+@app.route('/api/super/create-admin', methods=['POST'])
+@role_required(['system_admin', 'admin'])
+def super_create_admin():
+    data = request.json
+    phone = data.get('phone')
+    password = data.get('password')
+    role = data.get('role', 'org_admin')
+    org_id = data.get('org_id')
+    branch_id = data.get('branch_id')
+    
+    if not phone or not password:
+        return jsonify({"success": False, "message": "Telefon va parol kerak"}), 400
+        
+    pwd_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+    database.add_user(phone, None, phone, role, pwd_hash, org_id, branch_id)
+    return jsonify({"success": True})
 
 @app.route('/')
 def serve_index():
     return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/api/health')
+def health_check():
+    """Health Check Endpoint for Monitoring"""
+    return jsonify({
+        "status": "healthy", 
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.0.0" 
+    })
+
+@app.before_request
+def log_request_start():
+    request.start_time = time.time()
+
+@app.after_request
+def log_request_end(response):
+    # Skip logging for static assets to keep logs clean
+    if request.path.startswith(('/static', '/js', '/css', '/img')):
+        return response
+        
+    duration = time.time() - getattr(request, 'start_time', time.time())
+    # ANSI colors for better visibility in terminal
+    status_color = "\033[92m" if response.status_code < 400 else "\033[91m"
+    reset_color = "\033[0m"
+    
+    print(f"📝 {request.remote_addr} - [{request.method}] {request.path} - {status_color}{response.status_code}{reset_color} ({duration:.3f}s)")
+    return response
 
 @app.route('/<path:path>')
 def serve_static(path):
@@ -209,10 +330,23 @@ def get_queue_pos(q_id):
         return jsonify({"success": True, "data": pos})
     return jsonify({"success": False, "message": "Queue not found"}), 404
 
+@app.route('/api/branches', methods=['GET'])
+def get_public_branches():
+    org_id = request.args.get('org_id')
+    return jsonify({"success": True, "branches": database.get_branches(org_id)})
+
 @app.route('/api/admin/queues', methods=['GET'])
 @jwt_required()
 def admin_get_queues():
+    claims = get_jwt()
+    role = claims.get("role")
+    org_id = claims.get("org_id")
+    
     queues_list = database.get_all_queues_list()
+    
+    # Filter by org_id if not system_admin
+    if role != 'system_admin' and org_id:
+        queues_list = [q for q in queues_list if q.get('org_id') == org_id]
     
     conn = database.get_db_connection()
     services = conn.execute('SELECT id, name_uz FROM services').fetchall()
@@ -231,19 +365,29 @@ def admin_get_queues():
 @app.route('/api/admin/stats', methods=['GET'])
 @jwt_required()
 def admin_get_stats():
-    stats = database.get_admin_stats()
+    claims = get_jwt()
+    org_id = claims.get("org_id") if claims.get("role") != "system_admin" else None
+    
+    stats = database.get_admin_stats(org_id)
     return jsonify({"success": True, "stats": stats})
 
 @app.route('/api/admin/analytics', methods=['GET'])
 @jwt_required()
 def admin_get_analytics():
-    data = database.get_analytics_data()
+    claims = get_jwt()
+    # Filter by org_id if not system_admin
+    org_id = claims.get("org_id") if claims.get("role") != "system_admin" else None
+    
+    data = database.get_analytics_data(org_id)
     return jsonify({"success": True, "data": data})
 
 @app.route('/api/admin/call_next', methods=['POST'])
 @jwt_required()
 def admin_call_next():
-    current_queues = database.get_todays_queues().values() 
+    claims = get_jwt()
+    org_id = claims.get("org_id") if claims.get("role") != "system_admin" else None
+    
+    current_queues = database.get_todays_queues(org_id).values() 
     waiting_list = [q for q in current_queues if q['status'] == 'waiting']
     waiting_list.sort(key=lambda x: x['created_at']) 
     
@@ -252,10 +396,12 @@ def admin_call_next():
     
     next_client = waiting_list[0]
     database.update_queue_status(next_client['id'], 'serving')
+    
+    # Verify the item belongs to the caller's org for security (optional here since filtered above)
     notify_user_call(next_client)
     
     # Emit real-time update
-    socketio.emit('queue_updated', {'type': 'call_next', 'queue_id': next_client['id']})
+    socketio.emit('queue_updated', {'type': 'call_next', 'queue_id': next_client['id'], 'org_id': next_client.get('org_id')})
     
     return jsonify({"success": True, "queue": database.get_queue(next_client['id'])})
 
@@ -265,11 +411,76 @@ def admin_update_status():
     data = request.json
     q_id = data.get('id')
     new_status = data.get('status')
+    
+    claims = get_jwt()
+    user_role = claims.get("role")
+    user_org_id = claims.get("org_id")
+    
     if q_id and new_status:
+        # IDOR Protection
+        q = database.get_queue(q_id)
+        if not q:
+             return jsonify({"success": False, "message": "Queue not found"}), 404
+             
+        if user_role != 'system_admin' and str(q.get('org_id')) != str(user_org_id):
+             return jsonify({"success": False, "message": "Sizda bu amal uchun ruxsat yo'q"}), 403
+
         database.update_queue_status(q_id, new_status)
-        socketio.emit('queue_updated', {'type': 'status_change', 'queue_id': q_id, 'status': new_status})
+        socketio.emit('queue_updated', {'type': 'status_change', 'queue_id': q_id, 'status': new_status, 'org_id': q.get('org_id')})
         return jsonify({"success": True})
     return jsonify({"success": False, "message": "Invalid data"}), 400
+
+# --- Org Admin Settings API ---
+
+@app.route('/api/org/settings', methods=['GET', 'POST'])
+@role_required(['org_admin'])
+def org_settings():
+    claims = get_jwt()
+    org_id = claims.get("org_id")
+    
+    if request.method == 'GET':
+        # Fetch current info
+        # Reuse existing get_organizations but filter? Or simple query.
+        conn = database.get_db_connection()
+        org = conn.execute('SELECT * FROM organizations WHERE id = ?', (org_id,)).fetchone()
+        conn.close()
+        return jsonify({"success": True, "org": dict(org) if org else {}})
+        
+    if request.method == 'POST':
+        data = request.json
+        name = data.get('name')
+        if not name: return jsonify({"success": False, "message": "Nom kiritilmadi"}), 400
+        
+        success = database.update_organization(org_id, name)
+        return jsonify({"success": success})
+
+@app.route('/api/org/services', methods=['GET', 'POST', 'DELETE'])
+@role_required(['org_admin'])
+def org_services():
+    claims = get_jwt()
+    org_id = claims.get("org_id")
+    
+    if request.method == 'GET':
+        return jsonify({"success": True, "services": database.get_org_services(org_id)})
+        
+    if request.method == 'POST':
+        data = request.json
+        name = data.get('name')
+        duration = data.get('duration', 15)
+        # For simplicity, assign to first branch or pass branch_id
+        # Ideally UI should allow selecting branch if multi-branch, but MVP:
+        branches = database.get_branches(org_id)
+        if not branches: return jsonify({"success": False, "message": "Filial yo'q"}), 400
+        branch_id = branches[0]['id'] 
+        
+        svc_id = database.add_service(org_id, branch_id, name, duration)
+        return jsonify({"success": True, "id": svc_id})
+        
+    if request.method == 'DELETE':
+        svc_id = request.args.get('id')
+        if database.delete_service(svc_id, org_id):
+            return jsonify({"success": True})
+        return jsonify({"success": False, "message": "Xatolik"}), 400
 
 def notify_user_call(queue_item):
     try:
@@ -282,8 +493,104 @@ def notify_user_call(queue_item):
                 f"Iltimos, operator oldiga boring."
             )
             bot.send_message(user['user_id'], msg, parse_mode='HTML')
+        else:
+            # Fallback: Check JSON if not in DB
+            if os.path.exists(DATA_FILE):
+                with open(DATA_FILE, 'r') as f:
+                    ver_data = json.load(f)
+                    # Try to find by phone
+                    for key, val in ver_data.items():
+                         if val.get('phone') == phone or key == phone:
+                             bot.send_message(val['user_id'], msg, parse_mode='HTML')
+                             break
     except Exception as e:
         print(f"❌ Notification error: {e}")
+
+@app.route('/api/config/bot', methods=['GET'])
+def get_bot_info():
+    try:
+        bot_info = bot.get_me()
+        return jsonify({
+            "success": True, 
+            "username": bot_info.username
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/auth/send-code', methods=['POST'])
+def send_verification_code():
+    data = request.json
+    phone = data.get('phone')
+    uid = data.get('uid')
+    
+    if not phone or not uid:
+        return jsonify({"success": False, "message": "Phone and UID required"}), 400
+        
+    # Check if we have a chat_id for this UID from the shared file
+    chat_id = None
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, 'r') as f:
+                ver_data = json.load(f)
+                uid_key = f"uid_{uid}"
+                if uid_key in ver_data:
+                    chat_id = ver_data[uid_key].get('user_id')
+                
+                # Also check by phone if already verified
+                if not chat_id:
+                     phone_key = database.normalize_phone(phone)
+                     # The file format in bot.py for phone is keys like "+998..."
+                     # But let's check broadly
+                     if phone_key in ver_data:
+                         chat_id = ver_data[phone_key].get('user_id')
+        except:
+            pass
+
+    if chat_id:
+        import random
+        code = str(random.randint(1000, 9999))
+        try:
+            msg = f"🔐 Sizning tasdiqlash kodingiz: <b>{code}</b>"
+            # In a real app, store this code in memory/cache/db with a TTL (Time To Live)
+            # For this MVP, we will only send it to Telegram and NOT return it to frontend.
+            # Verifying will be done via a separate check-status or similar logic.
+            bot.send_message(chat_id, msg, parse_mode='HTML')
+            return jsonify({"success": True, "message": "Kod yuborildi"}) 
+        except Exception as e:
+            return jsonify({"success": False, "message": f"Telegram error: {str(e)}"}), 500
+    
+    return jsonify({"success": False, "message": "User not found. Please start bot."}), 404
+
+@app.route('/api/auth/check-status', methods=['POST'])
+def check_auth_status():
+    data = request.json
+    uid = data.get('uid')
+    phone = data.get('phone')
+    
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, 'r') as f:
+                ver_data = json.load(f)
+                
+                # Check UID
+                if uid and f"uid_{uid}" in ver_data:
+                    return jsonify({"success": True, "found": True, "data": ver_data[f"uid_{uid}"]})
+                
+                # Check Phone
+                if phone:
+                    phone_key = database.normalize_phone(phone)
+                    for key, val in ver_data.items():
+                        if key == phone or key == phone_key or (isinstance(val, dict) and val.get('phone') == phone_key):
+                             # SYNC TO DB: Important!
+                             if val.get('user_id'):
+                                 database.add_user(phone, val['user_id'], val.get('username', 'user'))
+                             
+                             return jsonify({"success": True, "found": True, "data": val})
+
+        except:
+            pass
+            
+    return jsonify({"success": True, "found": False})
 
 @app.route('/api/chat', methods=['POST'])
 def chat_ai():

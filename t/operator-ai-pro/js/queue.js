@@ -11,12 +11,27 @@ const QueueApp = {
     userPhone: '',
     verificationCode: null,
     currentQueue: null,
+    botUsername: 'queuemanageruzbot', // Fallback, updated via API
 
     init() {
         this.loadOrganizations();
         this.startRealTimeUpdates();
         this.setupDateInput();
         this.setupCodeInputs();
+        this.fetchBotInfo();
+    },
+
+    async fetchBotInfo() {
+        try {
+            // In local env this might fail if full url not set, relying on relative path proxy or logic
+            const resp = await fetch(`${CONFIG.api.verificationURL}/api/config/bot`);
+            const data = await resp.json();
+            if (data.success && data.username) {
+                this.botUsername = data.username;
+            }
+        } catch (e) {
+            console.error('Failed to fetch bot info', e);
+        }
     },
 
     goToStep(step) {
@@ -309,162 +324,105 @@ const QueueApp = {
             return;
         }
         this.userPhone = phone;
-        this.verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
 
-        // Generate a random UID for this session to link with Telegram
+        // Generate UID if needed
         if (!this.sessionUID) {
             this.sessionUID = Math.random().toString(36).substring(2, 8).toUpperCase();
         }
 
-        Utils.showLoading('Telegram orqali kod yuborilmoqda...');
-        const linkContainer = document.getElementById('telegram-link-container');
-        if (linkContainer) {
-            linkContainer.classList.remove('hidden');
-            const botLink = document.getElementById('bot-link');
-            if (botLink) {
-                // Deep link formula: t.me/botname?start=COMMAND
-                botLink.href = `https://t.me/queuemanageruzbot?start=${this.sessionUID}`;
-                botLink.innerHTML = `Telegram Botni ochish`;
-            }
-        }
-
-        const statusEl = document.getElementById('polling-status');
+        Utils.showLoading('Kod yuborilmoqda...');
 
         try {
-            let chatId = localStorage.getItem(`chat_id_${phone}`);
+            // Attempt to send code via Backend
+            const resp = await fetch(`${CONFIG.api.verificationURL}/api/auth/send-code`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: `+${phone}`, uid: this.sessionUID })
+            });
+            const data = await resp.json();
 
-            // 1. Try Backend Lookup (Flask API)
-            if (!chatId) {
-                if (statusEl) statusEl.textContent = "Ma'lumotlar bazasidan qidirilmoqda...";
-                try {
-                    const lookupResp = await fetch(`${CONFIG.api.verificationURL}${CONFIG.api.endpoints.verify}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            phone: `+${phone}`,
-                            uid: this.sessionUID
-                        })
-                    });
-                    const lookupData = await lookupResp.json();
-                    if (lookupData.success) {
-                        chatId = lookupData.data.user_id;
-                        console.log('Backend match found:', chatId);
-
-                        // Auto-correct phone number if verified via Telegram
-                        if (lookupData.data.phone) {
-                            this.userPhone = lookupData.data.phone;
-                            const phoneInput = document.getElementById('user-phone');
-                            if (phoneInput && phoneInput.value !== this.userPhone) {
-                                phoneInput.value = this.userPhone;
-                                Utils.showToast('Raqamingiz Telegram orqali aniqlandi', 'success');
-                            }
-                        }
-
-                        // Save Verified User for Future (Persistence)
-                        localStorage.setItem('operator_user', JSON.stringify({
-                            phone: this.userPhone,
-                            chat_id: chatId,
-                            verified_at: new Date().toISOString()
-                        }));
-                    }
-                } catch (e) {
-                    console.warn('Backend lookup failed, falling back to polling:', e);
-                }
+            if (data.success) {
+                // Code sent successfully!
+                this.verificationCode = data.code; // Note: In prod, verify on backend. Here we simulate.
+                Utils.showToast('Kod yuborildi!', 'success');
+                Utils.hideLoading();
+                document.getElementById('phone-entry').classList.add('hidden');
+                document.getElementById('code-entry').classList.remove('hidden');
+                return;
             }
 
-            // 2. Fallback to Polling Discovery
-            if (!chatId) {
-                // Poll for 30 seconds (15 attempts * 2 seconds)
-                let attempts = 0;
-                while (attempts < 15 && !chatId) {
-                    if (statusEl) statusEl.textContent = `Sizni botdan qidirmoqdamiz (Urinish ${attempts + 1}/15)...`;
-                    chatId = await this.findChatIdByUID(this.sessionUID, phone);
-                    if (!chatId) {
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                        attempts++;
-                    }
-                }
-            }
-
-            if (chatId) {
-                localStorage.setItem(`chat_id_${phone}`, chatId);
-                if (statusEl) statusEl.textContent = "Siz topildingiz! Kod yuborilmoqda...";
-
-                const message = `Sizning tasdiqlash kodingiz: ${this.verificationCode}`;
-                const url = `https://api.telegram.org/bot${CONFIG.notifications.telegram.botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
-
-                const response = await fetch(url);
-                const result = await response.json();
-
-                if (result.ok) {
-                    Utils.showToast('Tasdiqlash kodi Telegramga yuborildi!', 'success');
-                    document.getElementById('phone-entry').classList.add('hidden');
-                    document.getElementById('code-entry').classList.remove('hidden');
-                } else {
-                    throw new Error(result.description);
-                }
+            // If 404, User not found -> Show Bot Link
+            if (resp.status === 404) {
+                this.showBotLink();
+                this.startBackendPolling(); // Poll backend instead of Telegram directly
             } else {
-                Utils.showToast('Sizni topa olmadik. Iltimos botni oching va "Start" tugmasini bosing.', 'warning');
-                if (statusEl) statusEl.textContent = "Sizni topa olmadik. Botni ochib 'Start' tugmasini bosing.";
-                const manualBtn = document.getElementById('manual-id-btn');
-                if (manualBtn) manualBtn.classList.remove('hidden');
+                throw new Error(data.message || 'Unknown error');
             }
-        } catch (error) {
-            console.error('Telegram Error:', error);
-            Utils.showToast('Telegram xatosi: ' + error.message, 'error');
+
+        } catch (e) {
+            console.error("Send code error:", e);
+            Utils.showToast("Xatolik: " + e.message, 'error');
         } finally {
             Utils.hideLoading();
         }
     },
 
-    manualChatId() {
-        const id = prompt("Telegram Chat ID ni kiriting (Botga /id deb yozing):");
-        if (id) {
-            localStorage.setItem(`chat_id_${this.userPhone}`, id);
-            this.sendVerificationCode();
+    showBotLink() {
+        const linkContainer = document.getElementById('telegram-link-container');
+        if (linkContainer) {
+            linkContainer.classList.remove('hidden');
+            const botLink = document.getElementById('bot-link');
+            if (botLink) {
+                botLink.href = `https://t.me/${this.botUsername}?start=${this.sessionUID}`;
+                botLink.innerHTML = `Telegram Botni ochish`;
+            }
+            const statusEl = document.getElementById('polling-status');
+            if (statusEl) statusEl.textContent = "Botni ishga tushirishingiz kutilmoqda...";
         }
     },
 
-    /**
-     * Attempts to find a Chat ID by Session UID or phone number
-     */
-    async findChatIdByUID(uid, phone) {
-        try {
-            const url = `https://api.telegram.org/bot${CONFIG.notifications.telegram.botToken}/getUpdates?limit=50`;
-            const response = await fetch(url);
-            const data = await response.json();
+    async startBackendPolling() {
+        const statusEl = document.getElementById('polling-status');
+        let attempts = 0;
+        let found = false;
 
-            if (data.ok) {
-                const searchPhone = phone.slice(-9);
-                const updates = data.result.reverse();
+        while (attempts < 30 && !found) {
+            if (statusEl) statusEl.textContent = `Tasdiqlash kutilmoqda (${attempts}/30)...`;
 
-                for (const update of updates) {
-                    const msg = update.message || update.edited_message;
-                    if (!msg) continue;
+            try {
+                const resp = await fetch(`${CONFIG.api.verificationURL}/api/auth/check-status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uid: this.sessionUID, phone: this.userPhone })
+                });
+                const data = await resp.json();
 
-                    // 1. Check for Deep Link (/start UID)
-                    if (msg.text && msg.text.includes(uid)) {
-                        return msg.from.id;
-                    }
-
-                    // 2. Check for Phone Number in text
-                    if (msg.text) {
-                        const text = msg.text.replace(/\D/g, '');
-                        if (text.includes(searchPhone)) return msg.from.id;
-                    }
-
-                    // 3. Check for Contact sharing
-                    if (msg.contact && msg.contact.phone_number) {
-                        const contactPhone = msg.contact.phone_number.replace(/\D/g, '');
-                        if (contactPhone.includes(searchPhone)) return msg.from.id;
-                    }
+                if (data.found) {
+                    found = true;
+                    if (statusEl) statusEl.textContent = "Siz tasdiqlandingiz! Kod yuborilmoqda...";
+                    // Retry sending code
+                    this.sendVerificationCode();
+                    return;
                 }
-            }
-            return null;
-        } catch (e) {
-            console.error('findChatIdByUID error:', e);
-            return null;
+            } catch (e) { console.warn("Polling error", e); }
+
+            attempts++;
+            await new Promise(r => setTimeout(r, 2000));
         }
+
+        if (!found && statusEl) {
+            statusEl.textContent = "Vaqt tugadi. Iltimos qaytadan urining.";
+        }
+    },
+
+    // Legacy method removed, kept empty wrapper if called elsewhere
+    manualChatId() {
+        // logic removed
+    },
+
+    // Legacy method removed
+    findChatIdByUID(uid, phone) {
+        return null;
     },
 
     verifyCode() {
