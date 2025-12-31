@@ -137,6 +137,10 @@
                             <button class="btn btn-warning" id="btn-recall"><i class="fas fa-bell"></i> Qayta
                                 Chaqirish</button>
                             <button class="btn btn-danger" id="btn-noshow"><i class="fas fa-times"></i> Kelmadi</button>
+                            <button class="btn btn-outline" id="btn-transfer"
+                                style="border-color: var(--primary-color); color: var(--primary-light);">
+                                <i class="fas fa-random"></i> Yo'naltirish
+                            </button>
                         </div>
                     </div>
 
@@ -301,6 +305,26 @@
                             <!-- Populated by JS -->
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Transfer Modal -->
+            <div id="transfer-modal" class="modal-overlay hidden"
+                style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 20000; display: flex; align-items: center; justify-content: center;">
+                <div class="card card-glass" style="width: 100%; max-width: 400px; padding: 2rem;">
+                    <h3>Mijozni Yo'naltirish</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
+                        Keyingi bo'limni tanlang:
+                    </p>
+                    <div class="form-group">
+                        <select id="transfer-service-select" class="form-control">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                        <button class="btn btn-outline w-full" onclick="closeTransferModal()">Bekor qilish</button>
+                        <button class="btn btn-primary w-full" onclick="confirmTransfer()">Tasdiqlash</button>
+                    </div>
                 </div>
             </div>
     </div>

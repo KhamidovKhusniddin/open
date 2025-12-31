@@ -75,6 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnComplete = document.getElementById('btn-complete');
         const btnRecall = document.getElementById('btn-recall');
         const btnNoShow = document.getElementById('btn-noshow');
+        const btnTransfer = document.getElementById('btn-transfer');
 
         let currentQueueId = null;
 
@@ -241,6 +242,59 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnComplete) btnComplete.addEventListener('click', () => updateStatus('completed'));
         if (btnRecall) btnRecall.addEventListener('click', () => updateStatus('serving', true));
         if (btnNoShow) btnNoShow.addEventListener('click', () => updateStatus('noshow'));
+        if (btnTransfer) btnTransfer.addEventListener('click', openTransferModal);
+
+        async function openTransferModal() {
+            if (!currentQueueId) return;
+            const select = document.getElementById('transfer-service-select');
+            const modal = document.getElementById('transfer-modal');
+
+            select.innerHTML = '<option value="">Yuklanmoqda...</option>';
+            modal.classList.remove('hidden');
+
+            try {
+                const resp = await secureFetch('/api/org/services');
+                const data = await resp.json();
+                if (data.success && data.services) {
+                    select.innerHTML = data.services
+                        .map(s => `<option value="${s.id}">${s.name_uz}</option>`)
+                        .join('');
+                } else {
+                    select.innerHTML = '<option value="">Xizmatlar topilmadi</option>';
+                }
+            } catch (e) {
+                select.innerHTML = '<option value="">Xatolik yuz berdi</option>';
+            }
+        }
+
+        window.closeTransferModal = () => {
+            document.getElementById('transfer-modal').classList.add('hidden');
+        };
+
+        window.confirmTransfer = async () => {
+            const svcId = document.getElementById('transfer-service-select').value;
+            if (!svcId) return alert("Iltimos, bo'limni tanlang");
+
+            try {
+                const resp = await secureFetch('/api/admin/transfer_queue', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: currentQueueId, service_id: svcId })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    closeTransferModal();
+                    fetchQueueData();
+                    currentNumberEl.textContent = '---';
+                    currentQueueId = null;
+                    alert("Mijoz muvaffaqiyatli yo'naltirildi!");
+                } else {
+                    alert("Xatolik: " + data.message);
+                }
+            } catch (e) {
+                alert("Server xatosi");
+            }
+        };
 
         async function secureFetch(url, options = {}) {
             const token = localStorage.getItem('admin_token');

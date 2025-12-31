@@ -57,6 +57,17 @@ DATA_FILE = "verifications.json"
 # Initialize DB
 database.init_db()
 
+# --- Auto Admin Creation for Deployment ---
+def auto_create_admin():
+    admin_phone = os.getenv("ADMIN_PHONE")
+    admin_pass = os.getenv("ADMIN_PASS")
+    if admin_phone and admin_pass:
+        pwd_hash = bcrypt.generate_password_hash(admin_pass).decode('utf-8')
+        database.add_user(admin_phone, None, "Admin", "system_admin", pwd_hash)
+        print(f"AUTOMATIC: System Admin created/updated for {admin_phone}")
+
+auto_create_admin()
+
 # --- RBAC Helpers ---
 from functools import wraps
 def role_required(roles):
@@ -430,6 +441,58 @@ def admin_update_status():
         return jsonify({"success": True})
     return jsonify({"success": False, "message": "Invalid data"}), 400
 
+@app.route('/api/admin/transfer_queue', methods=['POST'])
+@jwt_required()
+def admin_transfer_queue():
+    data = request.json
+    q_id = data.get('id')
+    new_svc_id = data.get('service_id')
+    
+    if not q_id or not new_svc_id:
+        return jsonify({"success": False, "message": "Ma'lumotlar yetarli emas"}), 400
+        
+    claims = get_jwt()
+    user_org_id = claims.get("org_id")
+    user_role = claims.get("role")
+    
+    # 1. Verify queue and permission
+    q = database.get_queue(q_id)
+    if not q: return jsonify({"success": False, "message": "Navbat topilmadi"}), 404
+    
+    if user_role != 'system_admin' and str(q.get('org_id')) != str(user_org_id):
+        return jsonify({"success": False, "message": "Ruxsat yo'q"}), 403
+        
+    # 2. Update Queue: Status -> waiting, Svc -> new, Staff -> None
+    conn = database.get_db_connection()
+    try:
+        conn.execute('UPDATE queues SET status = "waiting", service_id = ?, staff_id = NULL WHERE id = ?', (new_svc_id, q_id))
+        conn.commit()
+    finally:
+        conn.close()
+        
+    # 3. Notify user via Telegram
+    try:
+        phone = database.normalize_phone(q.get('phone', ''))
+        user = database.get_user(phone)
+        if user and user.get('user_id'):
+            # Fetch service name for nice message
+            conn = database.get_db_connection()
+            svc = conn.execute('SELECT name_uz FROM services WHERE id = ?', (new_svc_id,)).fetchone()
+            conn.close()
+            svc_name = svc['name_uz'] if svc else "yangi bo'lim"
+            
+            msg = (
+                f"🔄 <b>Yo'naltirish!</b>\n\n"
+                f"Siz <b>{svc_name}</b> xonasiga yo'naltirildingiz.\n"
+                f"Raqamingiz: <b>{q['number']}</b>\n"
+                f"Iltimos, navbat kuting."
+            )
+            bot.send_message(user['user_id'], msg, parse_mode='HTML')
+    except Exception as e: print(f"Transfer notify error: {e}")
+    
+    socketio.emit('queue_updated', {'type': 'transfer', 'queue_id': q_id, 'new_service': new_svc_id, 'org_id': q.get('org_id')})
+    return jsonify({"success": True})
+
 # --- Org Admin Settings API ---
 
 @app.route('/api/org/settings', methods=['GET', 'POST'])
@@ -625,6 +688,64 @@ def chat_ai():
     except Exception as e:
         print(f"AI Error: {e}")
         return jsonify({"response": "Uzr, hozir javob bera olmayman."})
+
+
+# --- Web-Based Setup (Emergency/First-Time) ---
+@app.route('/init-admin', methods=['GET', 'POST'])
+def init_admin_page():
+    # Security: If admin already exists, BLOCK access
+    if database.check_system_admin_exists():
+        return "<h1>⚠️ Access Denied</h1><p>System Admin already exists. Please login normally.</p>", 403
+        
+    if request.method == 'POST':
+        phone = request.form.get('phone')
+        password = request.form.get('password')
+        
+        if not phone or not password:
+            return "Phone and password required", 400
+            
+        hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
+        database.add_user(phone, None, "SuperAdmin", "system_admin", hashed_pw)
+        
+        return f"""
+        <h1>✅ Muvaffaqiyatli!</h1>
+        <p>Admin yaratildi: <b>{phone}</b></p>
+        <p><a href='/admin.html'>Admin Panelga o'tish</a></p>
+        """
+
+    # Show Setup Form
+    return """
+    <!DOCTYPE html>
+    <html data-theme="dark">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Setup Admin</title>
+        <style>
+            body { background: #020617; color: white; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: system-ui, sans-serif; }
+            .card { background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 1rem; border: 1px solid rgba(255,255,255,0.1); width: 100%; max-width: 400px; }
+            input { width: 100%; padding: 0.8rem; margin-bottom: 1rem; border-radius: 0.5rem; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
+            button { width: 100%; padding: 0.8rem; background: #2563eb; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: bold; }
+            button:hover { background: #1d4ed8; }
+            h2 { margin-top: 0; text-align: center; margin-bottom: 1.5rem; }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h2>🚀 Tizimni sozlash</h2>
+            <form method="POST">
+                <label>Telefon raqam (Login)</label>
+                <input type="text" name="phone" placeholder="+998901234567" required>
+                
+                <label>Parol</label>
+                <input type="password" name="password" placeholder="Yangi parol o'ylab toping" required>
+                
+                <button type="submit">Admin Yaratish</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """
 
 def notification_scheduler():
     while True:

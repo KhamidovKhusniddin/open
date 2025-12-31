@@ -332,6 +332,13 @@ def get_admin_user(phone):
     conn.close()
     return dict(user) if user else None
 
+def check_system_admin_exists():
+    conn = get_db_connection()
+    # Check if ANY user with system_admin role exists
+    count = conn.execute('SELECT COUNT(*) FROM users WHERE role = "system_admin"').fetchone()[0]
+    conn.close()
+    return count > 0
+
 # --- Analytics ---
 
 def get_admin_stats(org_id=None):
