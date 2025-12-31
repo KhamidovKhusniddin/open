@@ -693,10 +693,10 @@ def chat_ai():
 # --- Web-Based Setup (Emergency/First-Time) ---
 @app.route('/init-admin', methods=['GET', 'POST'])
 def init_admin_page():
-    # Security: If admin already exists, BLOCK access
-    if database.check_system_admin_exists():
-        return "<h1>⚠️ Access Denied</h1><p>System Admin already exists. Please login normally.</p>", 403
-        
+    # Allow resetting even if admin exists (Emergency Mode)
+    # if database.check_system_admin_exists():
+    #    pass 
+    
     if request.method == 'POST':
         phone = request.form.get('phone')
         password = request.form.get('password')
@@ -705,11 +705,13 @@ def init_admin_page():
             return "Phone and password required", 400
             
         hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
+        # This will UPDATE if user exists due to ON CONFLICT(phone) in add_user
         database.add_user(phone, None, "SuperAdmin", "system_admin", hashed_pw)
         
         return f"""
-        <h1>✅ Muvaffaqiyatli!</h1>
-        <p>Admin yaratildi: <b>{phone}</b></p>
+        <h1>✅ Parol yangilandi!</h1>
+        <p>Admin: <b>{phone}</b></p>
+        <p>Parol: <b>{password}</b> (O'zgartirildi)</p>
         <p><a href='/admin.html'>Admin Panelga o'tish</a></p>
         """
 
