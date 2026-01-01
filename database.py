@@ -6,7 +6,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DB_NAME = os.getenv("DB_NAME", "queue_system.db")
+# Database configuration
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_NAME = os.path.join(BASE_DIR, "queue_system.db")
 
 def get_db_connection():
     conn = sqlite3.connect(DB_NAME)

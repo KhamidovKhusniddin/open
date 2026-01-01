@@ -1,6 +1,4 @@
-python-docx
 pyTelegramBotAPI
-lxml
 google-generativeai
 python-dotenv
 flask

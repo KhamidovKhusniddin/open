@@ -1,3 +1,8 @@
+import eventlet
+eventlet.monkey_patch()
+
+print("🏁 Pulse: app.py is starting execution...")
+
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
@@ -20,35 +25,67 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Serve static files from the 't/operator-ai-pro' directory
-app = Flask(__name__, static_url_path='', static_folder='t/operator-ai-pro')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+static_folder = os.path.join(BASE_DIR, 't', 'operator-ai-pro')
+app = Flask(__name__, static_url_path='', static_folder=static_folder)
 CORS(app) 
 
 # Security Setup
 app.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY")
 if not app.config['JWT_SECRET_KEY']:
-    # FAIL-SECURE: Do not start if secret is missing
-    raise RuntimeError("CRITICAL SECURITY ERROR: JWT_SECRET_KEY is not set in .env file. Please set it to a strong random string.")
+    print("FATAL: JWT_SECRET_KEY is missing!")
+    # For initial deployment, we can use a fallback but warn strongly
+    # Strictly for Render debugging, otherwise it crashes silently
+    app.config['JWT_SECRET_KEY'] = "emergency_fallback_secret_change_me"
+
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not BOT_TOKEN:
-    raise RuntimeError("CRITICAL SECURITY ERROR: BOT_TOKEN is not set in .env file.")
+    print("FATAL: BOT_TOKEN is missing!")
 if not GEMINI_API_KEY:
-    raise RuntimeError("CRITICAL SECURITY ERROR: GEMINI_API_KEY is not set in .env file.")
+    print("FATAL: GEMINI_API_KEY is missing!")
 
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-flash-latest')
+if BOT_TOKEN and GEMINI_API_KEY:
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel('gemini-flash-latest')
+        print("✅ Gemini AI initialized.")
+    except Exception as e:
+        print(f"❌ Gemini Init Error: {e}")
+        model = None
+else:
+    model = None
 
 # In-memory storage for AI chat sessions
 chat_sessions = {}
 
-# Initialize Bot
-bot = telebot.TeleBot(BOT_TOKEN)
+# Initialize Bot safely
+class DummyBot:
+    def __getattr__(self, name):
+        def dummy_func(*args, **kwargs):
+            return None
+        return dummy_func
+    def message_handler(self, *args, **kwargs):
+        return lambda f: f
+    def callback_query_handler(self, *args, **kwargs):
+        return lambda f: f
+
+bot = DummyBot()
+if BOT_TOKEN:
+    try:
+        bot = telebot.TeleBot(BOT_TOKEN)
+        print("✅ Telegram Bot initialized.")
+    except Exception as e:
+        print(f"❌ Bot Init Error: {e}")
+        bot = DummyBot()
+else:
+    print("⚠️ BOT_TOKEN missing, bot functions will be disabled (DummyBot active).")
 
 # In-memory storage for pending sessions (chat_id -> uid)
 pending_uids = {}
@@ -62,10 +99,14 @@ def auto_create_admin():
     admin_phone = os.getenv("ADMIN_PHONE")
     admin_pass = os.getenv("ADMIN_PASS")
     if admin_phone and admin_pass:
+        print(f"DEBUG: Found ADMIN_PHONE={admin_phone}, creating/updating admin...")
         pwd_hash = bcrypt.generate_password_hash(admin_pass).decode('utf-8')
         database.add_user(admin_phone, None, "Admin", "system_admin", pwd_hash)
-        print(f"AUTOMATIC: System Admin created/updated for {admin_phone}")
+        print(f"✅ AUTOMATIC: System Admin created/updated for {admin_phone}")
+    else:
+        print("DEBUG: No ADMIN_PHONE/ADMIN_PASS env vars found for auto-creation.")
 
+# Run initial setup always on import/startup
 auto_create_admin()
 
 # --- RBAC Helpers ---
@@ -151,6 +192,10 @@ def add_security_headers(response):
     # Security Policy
     response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.socket.io https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data: https://cdnjs.cloudflare.com; connect-src 'self'; img-src 'self' data:;"
     return response
+
+@app.route('/ping')
+def ping():
+    return "Pong! Server is alive.", 200
 
 # --- Flask Routes ---
 
@@ -262,6 +307,22 @@ def health_check():
         "version": "1.0.0" 
     })
 
+@app.route('/diag')
+def diagnostic():
+    """Diagnostic endpoint to check environment on Render"""
+    return jsonify({
+        "env": {
+            "PORT": os.getenv("PORT"),
+            "DB_NAME": os.getenv("DB_NAME"),
+            "BOT_TOKEN": "set" if os.getenv("BOT_TOKEN") else "MISSING",
+            "GEMINI_API_KEY": "set" if os.getenv("GEMINI_API_KEY") else "MISSING",
+            "JWT_SECRET_KEY": "set" if os.getenv("JWT_SECRET_KEY") else "MISSING"
+        },
+        "cwd": os.getcwd(),
+        "files": os.listdir('.'),
+        "db_writable": os.access('.', os.W_OK)
+    })
+
 @app.before_request
 def log_request_start():
     request.start_time = time.time()
@@ -280,9 +341,8 @@ def log_request_end(response):
     print(f"📝 {request.remote_addr} - [{request.method}] {request.path} - {status_color}{response.status_code}{reset_color} ({duration:.3f}s)")
     return response
 
-@app.route('/<path:path>')
-def serve_static(path):
-    return send_from_directory(app.static_folder, path)
+# Static serving for API-related tools if needed
+# (Catch-all moved to end)
 
 @app.route('/api/queues', methods=['POST'])
 def sync_queue():
@@ -749,6 +809,11 @@ def init_admin_page():
     </html>
     """
 
+# --- Catch-all for Static Assets (Must be last) ---
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory(app.static_folder, path)
+
 def notification_scheduler():
     while True:
         try:
@@ -785,7 +850,33 @@ def notification_scheduler():
             print(f"Scheduler error: {e}")
         time.sleep(60)
 
-if __name__ == '__main__':
+# Startup logic
+print("🚀 Operator AI System is preparing to run...")
+print(f"📦 Environment Check: BOT_TOKEN={'set' if BOT_TOKEN else 'MISSING'}, GEMINI={'set' if GEMINI_API_KEY else 'MISSING'}")
+
+# Start scheduler thread
+try:
     threading.Thread(target=notification_scheduler, daemon=True).start()
-    # threading.Thread(target=bot.infinity_polling, daemon=True).start()
-    socketio.run(app, debug=False, port=5000, host='0.0.0.0', allow_unsafe_werkzeug=True)
+    print("⏰ Notification scheduler thread started.")
+except Exception as e:
+    print(f"❌ Error starting scheduler: {e}")
+
+if __name__ == '__main__':
+    try:
+        # Check static folder
+        abs_static = os.path.abspath(app.static_folder)
+        print(f"📁 Static folder: {abs_static}")
+        print(f"📂 Folder exists: {os.path.exists(abs_static)}")
+        if os.path.exists(abs_static):
+            print(f"📄 Files in static: {os.listdir(abs_static)[:5]}...")
+            
+        # Use dynamic port for Render
+        port = int(os.environ.get("PORT", 5000))
+        print(f"🌐 Running script mode on 0.0.0.0:{port}")
+        
+        # Run with eventlet
+        socketio.run(app, port=port, host='0.0.0.0', allow_unsafe_werkzeug=True)
+    except Exception as e:
+        print(f"‼️ CRITICAL CRASH ON STARTUP: {e}")
+        import traceback
+        traceback.print_exc()

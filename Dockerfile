@@ -18,10 +18,9 @@ COPY . /app
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install eventlet  # Required for Socket.io prod server
 
-# Make port 5000 available to the world outside this container
+# Make port available (Render uses $PORT, but we expose 5000 as default)
 EXPOSE 5000
 
-# Run the application using eventlet (as required by flask-socketio)
+# Run the application using eventlet
 CMD ["python", "app.py"]
