@@ -861,6 +861,20 @@ try:
 except Exception as e:
     print(f"❌ Error starting scheduler: {e}")
 
+# Start Bot Polling thread
+def run_bot_polling():
+    try:
+        if BOT_TOKEN:
+            print("🤖 Bot polling thread started...")
+            bot.infinity_polling()
+    except Exception as e:
+        print(f"❌ Bot Polling Error: {e}")
+
+try:
+    threading.Thread(target=run_bot_polling, daemon=True).start()
+except Exception as e:
+    print(f"❌ Error starting bot polling: {e}")
+
 if __name__ == '__main__':
     try:
         # Check static folder

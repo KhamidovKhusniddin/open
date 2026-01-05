@@ -1,0 +1,46 @@
+HOZIRGI TAYYOR IMKONIYATLAR (Operator AI)
+=========================================
+
+Loyiha hozirda to'liq ishchi holatda (MVP - Minimum Viable Product). Quyidagi funksiyalar yozilgan va ishlashga tayyor:
+
+1. BACKEND (SERVER) QISMI
+-------------------------
+- Asosiy Tizim: Flask (Python) asosida qurilgan tezkor server.
+- Xavfsizlik: JWT token orqali himoyalangan kirish, parollar shifrlangan.
+- Real-time: SocketIO orqali ma'lumotlar jonli yangilanadi (sahifani reload qilish shart emas).
+- Ma'lumotlar Bazasi: SQLite ulangan, barcha jadvallar (users, queues, orgs) yaratilgan.
+
+2. TELEGRAM BOT INTEGRATSIYASI
+------------------------------
+- Tasdiqlash: Foydalanuvchi "Contact" yuborish orqali telefon raqamini tasdiqlay oladi.
+- Xabarnomalar: 
+  - Navbat olinganda.
+  - Operator chaqirganda.
+  - Navbat boshqa bo'limga o'tkazilganda (Transfer).
+
+3. FRONTEND - ADMIN PANELI (admin.html)
+---------------------------------------
+- Login: Himoyalangan kirish oynasi.
+- Dashboard: Kutayotganlar soni, o'rtacha vaqt va xizmat ko'rsatilganlar statistikasi.
+- Boshqaruv: 
+  - "Keyingisini chaqirish" (Call Next).
+  - "Tugatish" (Complete) / "Kelmadi" (No Show) / "Qayta chaqirish" (Recall).
+  - "Yo'naltirish" (Transfer) - mijozni boshqa bo'limga o'tkazish.
+- Sozlamalar: Tashkilot nomi va xizmat turlarini (bo'limlarni) qo'shish/o'chirish.
+
+4. FRONTEND - XODIM PANELI (staff.html)
+---------------------------------------
+- Soddalashtirilgan ko'rinish: Faqat xodimga kerakli tugmalar.
+- Statistika: Xodim bugun nechta odamga xizmat ko'rsatganini ko'rib turadi.
+
+5. FRONTEND - MIJOZ QISMI (index.html / queue.html)
+---------------------------------------------------
+- Landing Page: Chiroyli dizayndagi bosh sahifa.
+- Navbat olish: Telefon raqam orqali navbat olish shakli.
+- AI Chatbot: Google Gemini bilan ishlashga tayyor aqlli yordamchi (oyna pastida).
+- Tablo: Navbatingizni kuzatish oynasi.
+
+6. QO'SHIMCHA
+-------------
+- Super Admin: Tizim ichida yangi tashkilotlar va filiallar ochish imkoniyati.
+- Limitlar: Bir kishi bir kunda ko'pi bilan 3 marta navbat olishi mumkinligi tekshiriladi.
