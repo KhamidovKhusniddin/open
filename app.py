@@ -1176,11 +1176,11 @@ except Exception as e:
 
 # Start Bot Polling thread
 def run_bot_polling():
-    while True: # Keep the thread alive even after errors
+    while True:
         try:
             if BOT_TOKEN:
                 print("Bot status: Attempting to connect to Telegram... (Polling)")
-                bot.remove_webhook() # Clean up any old webhooks
+                bot.remove_webhook()
                 bot.infinity_polling(timeout=20, long_polling_timeout=20)
             else:
                 print("Bot polling skipped: No BOT_TOKEN.")
@@ -1191,10 +1191,11 @@ def run_bot_polling():
 
 try:
     print("Attempting to start Bot background service...")
-    eventlet.spawn(run_bot_polling)
-    print("Bot background service spawned (eventlet).")
+    bot_thread = threading.Thread(target=run_bot_polling, daemon=True)
+    bot_thread.start()
+    print("Bot background service started (threading).")
 except Exception as e:
-    print(f"[ERROR] Error spawning bot polling: {e}")
+    print(f"[ERROR] Error starting bot polling: {e}")
 
 if __name__ == '__main__':
     try:
