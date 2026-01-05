@@ -382,8 +382,9 @@ const Utils = {
      * Generate QR code data URL
      */
     generateQRCode(text, size = 200) {
-        // This is a placeholder - in real implementation, use QRCode.js library
-        return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}`;
+        if (!text) return '';
+        // Using Google Charts API as it's often more stable than qrserver
+        return `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chl=${encodeURIComponent(text)}&choe=UTF-8`;
     },
 
     /**

@@ -23,6 +23,16 @@ pending_uids = {}
 bot = telebot.TeleBot(TOKEN)
 
 def save_verification(user_id, phone_number, username):
+    import database
+    # Save to SQLite Database for permanent recognition
+    database.add_user(
+        phone=phone_number,
+        user_id=user_id,
+        username=username,
+        role='user'
+    )
+    
+    # Also keep JSON for backward compatibility/backup
     data = {}
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, 'r') as f:
@@ -31,15 +41,11 @@ def save_verification(user_id, phone_number, username):
             except json.JSONDecodeError:
                 data = {}
     
-    # Save Phone -> UserID
     data[str(phone_number)] = {
         "user_id": user_id,
-        "username": username
+        "username": username,
+        "time": datetime.datetime.now().isoformat()
     }
-    
-    import datetime
-    data[str(phone_number)]["time"] = datetime.datetime.now().isoformat()
-
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=4)
 
@@ -120,6 +126,30 @@ def handle_contact(message):
         # Remove keyboard
         markup = types.ReplyKeyboardRemove()
         bot.send_message(message.chat.id, response_text, reply_markup=markup)
+
+# --- NEW: FEEDBACK HANDLER ---
+@bot.callback_query_handler(func=lambda call: call.data.startswith('rate_'))
+def handle_rating(call):
+    # Format: rate_queueid_stars
+    try:
+        parts = call.data.split('_')
+        if len(parts) == 3:
+            q_id = parts[1]
+            stars = int(parts[2])
+            
+            import database
+            if database.add_rating(q_id, stars, "Telegram orqali baholandi"):
+                bot.edit_message_text(
+                    chat_id=call.message.chat.id,
+                    message_id=call.message.message_id,
+                    text=f"⭐️ Rahmat! Siz {stars} ball bilan baholadingiz. Fikringiz xizmat sifatini oshirishga yordam beradi!"
+                )
+                bot.answer_callback_query(call.id, "Baho qabul qilindi!")
+            else:
+                bot.answer_callback_query(call.id, "Xatolik yuz berdi")
+    except Exception as e:
+        print(f"Rating handling error: {e}")
+        bot.answer_callback_query(call.id, "Xatolik!")
 
 if __name__ == '__main__':
     print("🤖 Tasdiqlash boti ishga tushdi...")

@@ -301,6 +301,27 @@
     color: #9ca3af;
 }
 
+/* Premium Redirect Button Style (from image) */
+.btn-transfer {
+    background: transparent !important;
+    border: 1.5px solid #6366f1 !important;
+    color: #818cf8 !important;
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer;
+}
+
+.btn-transfer:hover {
+    background: rgba(99, 102, 241, 0.1) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
     .current-serving-section {

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="uz" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
@@ -9,168 +9,136 @@
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👨‍💼</text></svg>">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/staff.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
 </head>
 
 <body>
+    <div class="bg-pattern"></div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal-overlay">
+        <div class="modal-content card-glass-glow animate-fadeIn">
+            <div class="brand-icon">👨‍⚕️</div>
+            <h2>Xodimlar uchun kirish</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-phone">Telefon raqam</label>
+                    <input type="tel" id="login-phone" class="form-control" placeholder="+998901234567" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Parol</label>
+                    <input type="password" id="login-password" class="form-control" placeholder="******" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-full">Kirish</button>
+                <p id="login-error" class="error-text"></p>
+            </form>
+        </div>
+    </div>
+
     <div class="staff-container">
         <!-- Header -->
-        <header class="staff-header">
+        <header class="staff-header card-glass">
             <div class="header-left">
                 <span class="brand-icon">🤖</span>
                 <span class="brand-name gradient-text">Operator AI</span>
-                <span class="staff-badge">Staff Panel</span>
+                <span class="staff-badge">Staff Mode</span>
             </div>
             <div class="header-right">
                 <div class="language-switcher"></div>
-                <div class="staff-info" id="staff-info">
-                    <span class="staff-name" id="staff-name">Staff Member</span>
-                    <span class="staff-counter" id="staff-counter">Counter 1</span>
+                <div class="staff-profile" id="staff-profile">
+                    <div class="staff-avatar">👨‍⚕️</div>
+                    <div class="staff-info">
+                        <span class="staff-name" id="staff-name">Yuklanmoqda...</span>
+                        <span class="staff-counter" id="staff-counter">Xona --</span>
+                    </div>
+                    <button class="logout-btn" onclick="StaffApp.logout()" title="Chiqish">✕</button>
                 </div>
             </div>
         </header>
 
         <!-- Main Content -->
         <main class="staff-main">
-            <!-- Current Queue -->
-            <div class="current-queue-section">
-                <div class="card">
-                    <h2 class="card-title" data-i18n="current_customer">Joriy mijoz</h2>
+            <!-- Left Side: Current Customer -->
+            <div class="current-customer-panel">
+                <div class="card-glass-glow current-card">
+                    <div class="card-header">
+                        <h2 data-i18n="current_customer">Joriy mijoz</h2>
+                        <span class="pulse-indicator"></span>
+                    </div>
 
                     <div id="current-queue-display">
+                        <!-- Loading state -->
                         <div class="no-queue">
                             <div class="no-queue-icon">📭</div>
                             <p data-i18n="no_current_queue">Hozirda navbat yo'q</p>
-                            <button class="btn btn-primary btn-lg" onclick="StaffApp.callNext()">
-                                <span>📞</span>
+                            <button class="btn btn-primary btn-lg shine-effect" onclick="StaffApp.callNext()">
+                                <i class="icon-call">📞</i>
                                 <span data-i18n="call_next">Keyingisini chaqirish</span>
                             </button>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Waiting Queue -->
-            <div class="waiting-queue-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title" data-i18n="waiting">Kutmoqda</h3>
-                        <span class="badge badge-primary" id="waiting-count">0</span>
+                <!-- Stats Summary -->
+                <div class="quick-stats card-glass">
+                    <div class="stat-item">
+                        <span class="stat-val" id="stat-served">0</span>
+                        <span class="stat-lab" data-i18n="served_today">Xizmat k'orsatildi</span>
                     </div>
-                    <div class="waiting-list" id="waiting-list">
-                        <!-- Populated by JavaScript -->
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <span class="stat-val" id="stat-avg-time">0</span>
+                        <span class="stat-lab">O'rtacha vaqt (min)</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Today's Stats -->
-            <div class="stats-section">
-                <div class="card">
-                    <h3 class="card-title" data-i18n="today_stats">Bugungi statistika</h3>
-                    <div class="stats-grid">
-                        <div class="stat-box">
-                            <div class="stat-value" id="stat-served">0</div>
-                            <div class="stat-label" data-i18n="served_today">Xizmat ko'rsatildi</div>
+            <!-- Right Side: Waiting List -->
+            <div class="waiting-list-panel">
+                <div class="card-glass waiting-card">
+                    <div class="card-header">
+                        <h3 data-i18n="waiting">Kutish zalida</h3>
+                        <span class="badge" id="waiting-count">0</span>
+                    </div>
+                    <div class="waiting-list" id="waiting-list">
+                        <!-- Populated by JS -->
+                        <div class="empty-list">Navbat bo'sh</div>
+                    </div>
+                </div>
+                <!-- Statistika Section -->
+                <div class="card-glass analytics-card mt-md animate-fadeIn">
+                    <div class="card-header">
+                        <h3 data-i18n="analytics">Statistika</h3>
+                        <div class="header-actions">
+                            <button class="btn btn-sm btn-outline" onclick="StaffApp.fetchAnalytics()">🔄</button>
                         </div>
-                        <div class="stat-box">
-                            <div class="stat-value" id="stat-avg-time">0</div>
-                            <div class="stat-label">O'rtacha vaqt (min)</div>
+                    </div>
+                    <div class="analytics-grid">
+                        <div class="chart-container">
+                            <h4>📈 Bugungi Tashriflar</h4>
+                            <canvas id="hourlyTrafficChart"></canvas>
+                        </div>
+                        <div class="chart-container mt-md">
+                            <h4>📊 Xizmatlar Taqsimoti</h4>
+                            <canvas id="serviceUsageChart"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
         </main>
     </div>
-    <!DOCTYPE html>
-    <html lang="uz">
 
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Xodim Paneli - Operator AI</title>
-        <link rel="icon"
-            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👨‍💼</text></svg>">
-        <link rel="stylesheet" href="css/main.css">
-        <link rel="stylesheet" href="css/staff.css">
-    </head>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/language.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/queue-manager.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/staff.js"></script>
+</body>
 
-    <body>
-        <div class="staff-container">
-            <!-- Header -->
-            <header class="staff-header">
-                <div class="header-left">
-                    <span class="brand-icon">🤖</span>
-                    <span class="brand-name gradient-text">Operator AI</span>
-                    <span class="staff-badge">Staff Panel</span>
-                </div>
-                <div class="header-right">
-                    <div class="language-switcher"></div>
-                    <div class="staff-info" id="staff-info">
-                        <span class="staff-name" id="staff-name">Staff Member</span>
-                        <span class="staff-counter" id="staff-counter">Counter 1</span>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Main Content -->
-            <main class="staff-main">
-                <!-- Current Queue -->
-                <div class="current-queue-section">
-                    <div class="card">
-                        <h2 class="card-title" data-i18n="current_customer">Joriy mijoz</h2>
-
-                        <div id="current-queue-display">
-                            <div class="no-queue">
-                                <div class="no-queue-icon">📭</div>
-                                <p data-i18n="no_current_queue">Hozirda navbat yo'q</p>
-                                <button class="btn btn-primary btn-lg" onclick="StaffApp.callNext()">
-                                    <span>📞</span>
-                                    <span data-i18n="call_next">Keyingisini chaqirish</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Waiting Queue -->
-                <div class="waiting-queue-section">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title" data-i18n="waiting">Kutmoqda</h3>
-                            <span class="badge badge-primary" id="waiting-count">0</span>
-                        </div>
-                        <div class="waiting-list" id="waiting-list">
-                            <!-- Populated by JavaScript -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Today's Stats -->
-                <div class="stats-section">
-                    <div class="card">
-                        <h3 class="card-title" data-i18n="today_stats">Bugungi statistika</h3>
-                        <div class="stats-grid">
-                            <div class="stat-box">
-                                <div class="stat-value" id="stat-served">0</div>
-                                <div class="stat-label" data-i18n="served_today">Xizmat ko'rsatildi</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-value" id="stat-avg-time">0</div>
-                                <div class="stat-label">O'rtacha vaqt (min)</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </div>
-
-        <!-- Scripts -->
-        <script src="config.js"></script>
-        <script src="js/utils.js"></script>
-        <script src="js/language.js"></script>
-        <script src="js/database.js"></script>
-        <script src="js/queue-manager.js"></script>
-        <script src="js/notifications.js"></script>
-        <script src="js/staff.js"></script>
-    </body>
-
-    </html>
+</html>

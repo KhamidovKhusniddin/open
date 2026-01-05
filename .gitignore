@@ -1,11 +1,53 @@
+# Environment variables
 .env
+.env.local
+.env.production
+
+# Python cache
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environment
 venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Database
 *.db
-*.log
+*.sqlite
+*.sqlite3
 queue_system.db
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
 verifications.json
-queues.json
-# t/operator-ai-pro/js/database.js 
-# t/operator-ai-pro/config.js
+temp/
+tmp/
+
+# Sensitive files
+passwords_gulbahor.txt
+*.pem
+*.key
+
+# Node modules (if any)
+node_modules/

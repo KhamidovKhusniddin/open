@@ -1,7 +1,7 @@
 import eventlet
 eventlet.monkey_patch()
 
-print("🏁 Pulse: app.py is starting execution...")
+print("[INFO] Pulse: app.py is starting execution...")
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -23,6 +23,7 @@ import json
 from dotenv import load_dotenv
 
 load_dotenv()
+print(f"DEBUG: Loaded BOT_TOKEN from .env: {os.getenv('BOT_TOKEN')[:5] if os.getenv('BOT_TOKEN') else 'NONE'}...")
 
 # Serve static files from the 't/operator-ai-pro' directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -55,9 +56,9 @@ if BOT_TOKEN and GEMINI_API_KEY:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
         model = genai.GenerativeModel('gemini-flash-latest')
-        print("✅ Gemini AI initialized.")
+        print("Gemini AI initialized.")
     except Exception as e:
-        print(f"❌ Gemini Init Error: {e}")
+        print(f"[ERROR] Gemini Init Error: {e}")
         model = None
 else:
     model = None
@@ -80,12 +81,12 @@ bot = DummyBot()
 if BOT_TOKEN:
     try:
         bot = telebot.TeleBot(BOT_TOKEN)
-        print("✅ Telegram Bot initialized.")
+        print(f"Telegram Bot initialized with token: {BOT_TOKEN[:5]}...{BOT_TOKEN[-5:] if len(BOT_TOKEN) > 10 else ''}")
     except Exception as e:
-        print(f"❌ Bot Init Error: {e}")
+        print(f"[ERROR] Bot Init Error (Check your token!): {e}")
         bot = DummyBot()
 else:
-    print("⚠️ BOT_TOKEN missing, bot functions will be disabled (DummyBot active).")
+    print("[WARN] BOT_TOKEN missing in .env! Bot functions will NOT work.")
 
 # In-memory storage for pending sessions (chat_id -> uid)
 pending_uids = {}
@@ -183,6 +184,25 @@ def handle_contact(message):
             del pending_uids[message.chat.id]
         
         bot.send_message(message.chat.id, "✅ Rahmat! Raqamingiz tasdiqlandi.", reply_markup=types.ReplyKeyboardRemove())
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('rate_'))
+def handle_rating(call):
+    # Format: rate_queueid_stars
+    parts = call.data.split('_')
+    if len(parts) == 3:
+        q_id = parts[1]
+        stars = int(parts[2])
+        
+        # Save to DB
+        database.add_rating(q_id, stars, "Telegram orqali baholandi")
+        
+        # Edit message to confirm
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=f"⭐️ Rahmat! Siz {stars} ball bilan baholadingiz. Fikringiz biz uchun muhim!"
+        )
+        bot.answer_callback_query(call.id, "Baholash uchun rahmat!")
 
 @app.after_request
 def add_security_headers(response):
@@ -338,7 +358,7 @@ def log_request_end(response):
     status_color = "\033[92m" if response.status_code < 400 else "\033[91m"
     reset_color = "\033[0m"
     
-    print(f"📝 {request.remote_addr} - [{request.method}] {request.path} - {status_color}{response.status_code}{reset_color} ({duration:.3f}s)")
+    print(f"[REQ] {request.remote_addr} - [{request.method}] {request.path} - {status_color}{response.status_code}{reset_color} ({duration:.3f}s)")
     return response
 
 # Static serving for API-related tools if needed
@@ -364,8 +384,30 @@ def sync_queue():
 
     success = database.add_queue(queue_data)
     if success:
-        return jsonify({"success": True})
-    return jsonify({"success": False, "message": "Database error"}), 500
+        # Get the ID of the newly created queue (if it was passed in queue_data)
+        q_id = queue_data.get('id')
+        pos_data = None
+        if q_id:
+            pos_data = database.get_queue_position(q_id)
+            
+            # --- NOTIFY VIA TELEGRAM ---
+            user = database.get_user(phone)
+            if user and user.get('user_id'):
+                chat_id = user['user_id']
+                try:
+                    msg = (
+                        f"🎫 <b>Yangi navbat: {queue_data.get('number')}</b>\n"
+                        f"📍 Joylashuv: {pos_data['position']}-o'rin\n"
+                        f"⏳ Taxminiy kutish vaqti: {pos_data['estimated_wait']} daqiqa\n\n"
+                        "Sizning navbatingiz yaqinlashganda xabar beramiz."
+                    )
+                    bot.send_message(chat_id, msg, parse_mode='HTML')
+                except: pass
+            # ---------------------------
+
+        return jsonify({"success": True, "pos": pos_data})
+    
+    return jsonify({"success": False, "message": "Bu vaqt band yoki ma'lumotlar bazasida xatolik"}), 400
 
 @app.route('/api/staff-load', methods=['GET'])
 def get_staff_load():
@@ -400,6 +442,43 @@ def get_queue_pos(q_id):
     if pos:
         return jsonify({"success": True, "data": pos})
     return jsonify({"success": False, "message": "Queue not found"}), 404
+
+@app.route('/api/branch-wait-times', methods=['GET'])
+def get_branch_wait_times():
+    branch_id = request.args.get('branch_id')
+    if not branch_id:
+        return jsonify({"success": False, "message": "branch_id required"}), 400
+    
+    conn = database.get_db_connection()
+    today = datetime.now().strftime('%Y-%m-%d')
+    try:
+        services = conn.execute('SELECT id, estimated_duration FROM services WHERE branch_id = ?', (branch_id,)).fetchall()
+        wait_times = {}
+        for svc in services:
+            # Count waiting people for this service today
+            count = conn.execute('SELECT COUNT(*) FROM queues WHERE service_id = ? AND branch_id = ? AND status = "waiting" AND date = ?', 
+                                (svc['id'], branch_id, today)).fetchone()[0]
+            
+            # Simple prediction: (N+1) * duration
+            wait_times[svc['id']] = {
+                "people": count,
+                "wait_time": (count + 1) * svc['estimated_duration']
+            }
+        return jsonify({"success": True, "wait_times": wait_times})
+    finally:
+        conn.close()
+
+@app.route('/api/booked-slots', methods=['GET'])
+def get_booked():
+    date = request.args.get('date')
+    branch_id = request.args.get('branch_id')
+    staff_id = request.args.get('staff_id')
+    
+    if not date or not branch_id:
+        return jsonify({"success": False, "message": "date and branch_id required"}), 400
+        
+    slots = database.get_booked_slots(date, branch_id, staff_id)
+    return jsonify({"success": True, "slots": slots})
 
 @app.route('/api/branches', methods=['GET'])
 def get_public_branches():
@@ -598,12 +677,172 @@ def org_services():
         
         svc_id = database.add_service(org_id, branch_id, name, duration)
         return jsonify({"success": True, "id": svc_id})
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    data = request.json
+    phone = data.get('phone')
+    password = data.get('password')
+    
+    if not phone or not password:
+        return jsonify({"success": False, "message": "Phone and Password required"}), 400
+        
+    user = database.get_user(phone)
+    if not user:
+        return jsonify({"success": False, "message": "User not found"}), 401
+        
+    if bcrypt.check_password_hash(user['password_hash'], password):
+        # Create JWT token
+        role = user.get('role', 'staff')
+        access_token = create_access_token(identity=user['user_id'], additional_claims={
+            "role": role, 
+            "org_id": user.get('org_id'),
+            "branch_id": user.get('branch_id')
+        })
+        
+        return jsonify({
+            "success": True, 
+            "token": access_token,
+            "user": {
+                "name": user['username'],
+                "role": role,
+                "org_id": user['org_id'],
+                "branch_id": user['branch_id']
+            }
+        })
+    else:
+        return jsonify({"success": False, "message": "Invalid credentials"}), 401
+
+@app.route('/api/staff/queues', methods=['GET'])
+@jwt_required()
+def get_staff_queues():
+    claims = get_jwt()
+    branch_id = claims.get("branch_id")
+    
+    # Get all waiting queues for this branch
+    conn = database.get_db_connection()
+    queues = conn.execute('''
+        SELECT q.*, s.name_uz as service_name 
+        FROM queues q
+        JOIN services s ON q.service_id = s.id
+        WHERE q.branch_id = ? AND q.status IN ('waiting', 'called', 'serving')
+        ORDER BY q.created_at ASC
+    ''', (branch_id,)).fetchall()
+    conn.close()
+    
+    return jsonify({"success": True, "queues": [dict(q) for q in queues]})
         
     if request.method == 'DELETE':
         svc_id = request.args.get('id')
         if database.delete_service(svc_id, org_id):
             return jsonify({"success": True})
         return jsonify({"success": False, "message": "Xatolik"}), 400
+        return jsonify({"success": False, "message": "Xatolik"}), 400
+
+@app.route('/api/staff/call-next', methods=['POST'])
+@jwt_required()
+def staff_call_next():
+    claims = get_jwt()
+    branch_id = claims.get("branch_id")
+    
+    conn = database.get_db_connection()
+    # Find oldest waiting
+    queue = conn.execute('''
+        SELECT * FROM queues 
+        WHERE branch_id = ? AND status = 'waiting'
+        ORDER BY created_at ASC LIMIT 1
+    ''', (branch_id,)).fetchone()
+    
+    if queue:
+        # Update status
+        now_iso = datetime.now().isoformat()
+        conn.execute("UPDATE queues SET status = 'called', called_at = ? WHERE id = ?", (now_iso, queue['id']))
+        conn.commit()
+        
+        # Notify
+        socketio.emit('queue_update', {'org_id': queue['org_id']}, to=queue['org_id'])
+        
+        q_dict = dict(queue)
+        q_dict['status'] = 'called'
+        notify_user_call(q_dict)
+
+        conn.close()
+        return jsonify({"success": True, "queue": q_dict})
+    
+    conn.close()
+    return jsonify({"success": False, "message": "Navbat yo'q"}), 404
+
+@app.route('/api/staff/complete', methods=['POST'])
+@jwt_required()
+def staff_complete():
+    data = request.json
+    q_id = data.get('queue_id')
+    
+    # 1. Update status in DB
+    database.update_queue_status(q_id, 'completed')
+    
+    # 2. Get queue info to notify patient
+    q = database.get_queue(q_id)
+    if q:
+        # Notify user that service is finished and ask for feedback
+        user = database.get_user(q['phone'])
+        if user and user.get('user_id'):
+            chat_id = user['user_id']
+            try:
+                # Send feedback request
+                markup = telebot.types.InlineKeyboardMarkup()
+                markup.row(
+                   telebot.types.InlineKeyboardButton("⭐️ 1", callback_data=f"rate_{q_id}_1"),
+                   telebot.types.InlineKeyboardButton("⭐️ 2", callback_data=f"rate_{q_id}_2"),
+                   telebot.types.InlineKeyboardButton("⭐️ 3", callback_data=f"rate_{q_id}_3"),
+                   telebot.types.InlineKeyboardButton("⭐️ 4", callback_data=f"rate_{q_id}_4"),
+                   telebot.types.InlineKeyboardButton("⭐️ 5", callback_data=f"rate_{q_id}_5")
+                )
+                bot.send_message(chat_id, "✅ Xizmat yakunlandi! Iltimos, xizmat ko'rsatish sifatini baholang:", reply_markup=markup)
+            except Exception as e:
+                print(f"Error sending feedback request: {e}")
+
+    return jsonify({"success": True})
+
+@app.route('/api/feedback', methods=['POST'])
+def submit_feedback():
+    data = request.json
+    q_id = data.get('queue_id')
+    rating = data.get('rating')
+    comment = data.get('comment', '')
+    
+    if not q_id or not rating:
+        return jsonify({"success": False, "message": "Queue ID and rating required"}), 400
+        
+    if database.add_rating(q_id, rating, comment):
+        return jsonify({"success": True})
+    return jsonify({"success": False, "message": "Error saving feedback"}), 500
+
+@app.route('/api/admin/ratings', methods=['GET'])
+@jwt_required()
+def get_ratings():
+    claims = get_jwt()
+    org_id = claims.get("org_id") if claims.get("role") != "system_admin" else None
+    
+    ratings_data = database.get_average_ratings(org_id)
+    recent_feedback = database.get_recent_feedback(org_id)
+    return jsonify({
+        "success": True, 
+        "ratings": ratings_data,
+        "recent": recent_feedback
+    })
+
+@app.route('/api/staff/no-show', methods=['POST'])
+@jwt_required()
+def staff_no_show():
+    data = request.json
+    q_id = data.get('queue_id')
+    conn = database.get_db_connection()
+    now_iso = datetime.now().isoformat()
+    conn.execute("UPDATE queues SET status = 'no-show', completed_at = ? WHERE id = ?", (now_iso, q_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
 
 def notify_user_call(queue_item):
     try:
@@ -646,43 +885,117 @@ def send_verification_code():
     phone = data.get('phone')
     uid = data.get('uid')
     
-    if not phone or not uid:
-        return jsonify({"success": False, "message": "Phone and UID required"}), 400
-        
-    # Check if we have a chat_id for this UID from the shared file
+    if not phone:
+        return jsonify({"success": False, "message": "Raqamni kiriting"}), 400
+    
+    phone_norm = database.normalize_phone(phone)
     chat_id = None
-    if os.path.exists(DATA_FILE):
+    
+    # Check DB
+    user = database.get_user(phone_norm)
+    if user and user.get('user_id'):
+        chat_id = user['user_id']
+        
+    # Check JSON
+    if not chat_id and os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, 'r') as f:
                 ver_data = json.load(f)
-                uid_key = f"uid_{uid}"
-                if uid_key in ver_data:
-                    chat_id = ver_data[uid_key].get('user_id')
-                
-                # Also check by phone if already verified
-                if not chat_id:
-                     phone_key = database.normalize_phone(phone)
-                     # The file format in bot.py for phone is keys like "+998..."
-                     # But let's check broadly
-                     if phone_key in ver_data:
-                         chat_id = ver_data[phone_key].get('user_id')
-        except:
-            pass
+                if uid and f"uid_{uid}" in ver_data:
+                    chat_id = ver_data[f"uid_{uid}"].get('user_id')
+                elif phone_norm in ver_data:
+                    chat_id = ver_data[phone_norm].get('user_id')
+        except: pass
 
     if chat_id:
         import random
         code = str(random.randint(1000, 9999))
         try:
-            msg = f"🔐 Sizning tasdiqlash kodingiz: <b>{code}</b>"
-            # In a real app, store this code in memory/cache/db with a TTL (Time To Live)
-            # For this MVP, we will only send it to Telegram and NOT return it to frontend.
-            # Verifying will be done via a separate check-status or similar logic.
-            bot.send_message(chat_id, msg, parse_mode='HTML')
-            return jsonify({"success": True, "message": "Kod yuborildi"}) 
-        except Exception as e:
-            return jsonify({"success": False, "message": f"Telegram error: {str(e)}"}), 500
+            bot.send_message(chat_id, f"🔐 Kirish kodi: {code}")
+            return jsonify({"success": True, "message": "Kod yuborildi", "code": code}) 
+        except: pass
     
-    return jsonify({"success": False, "message": "User not found. Please start bot."}), 404
+    return jsonify({"success": False, "message": "Botga kirib /start bosing."}), 404
+
+@app.route('/api/update_notes', methods=['POST'])
+@jwt_required()
+def update_queue_notes():
+    data = request.json
+    queue_id = data.get('queue_id')
+    notes = data.get('notes')
+    
+    if not queue_id:
+        return jsonify({"success": False, "message": "Queue ID required"}), 400
+        
+    database.update_queue_notes(queue_id, notes)
+    return jsonify({"success": True})
+
+@app.route('/api/transfer_patient', methods=['POST'])
+@jwt_required()
+def transfer_patient():
+    data = request.json
+    current_queue_id = data.get('queue_id')
+    new_service_id = data.get('service_id')
+    notes = data.get('notes')
+    
+    # 1. Get current queue data
+    current_q = database.get_queue(current_queue_id)
+    if not current_q:
+        return jsonify({"success": False, "message": "Queue not found"}), 404
+        
+    # 2. Add to new queue with priority (optional: can add 'status': 'waiting' explicitly)
+    new_queue_data = {
+        "phone": current_q['phone'],
+        "number": current_q['number'], # Keep the same ticket number
+        "status": "waiting",
+        "date": datetime.now().strftime('%Y-%m-%d'),
+        "time": datetime.now().strftime('%H:%M'),
+        "serviceId": new_service_id,
+        "branchId": current_q['branch_id'],
+        "org_id": current_q['org_id'],
+        "notes": notes, # Pass the notes to the new doctor (History)
+        "parent_queue_id": current_queue_id # Link to previous visit
+    }
+    
+    if database.add_queue(new_queue_data):
+        # 3. Mark current queue as "transferred" or just completed
+        database.update_queue_status(current_queue_id, 'completed') 
+        socketio.emit('queue_update', {'org_id': current_q['org_id']}, to=current_q['org_id'])
+        return jsonify({"success": True, "message": "Bemor muvaffaqiyatli o'tkazildi"})
+    
+    return jsonify({"success": False, "message": "Error creating transfer queue"}), 500
+
+@app.route('/api/staff/patient-history', methods=['GET'])
+@jwt_required()
+def get_staff_patient_history():
+    phone = request.args.get('phone')
+    if not phone:
+        return jsonify({"success": False, "message": "Phone required"}), 400
+    
+    history = database.get_patient_history(phone)
+    return jsonify({"success": True, "history": history})
+
+@app.route('/api/staff/current', methods=['GET'])
+@jwt_required()
+def get_staff_current():
+    claims = get_jwt()
+    branch_id = claims.get("branch_id")
+    
+    conn = database.get_db_connection()
+    # Find active queue (called or serving) for this branch
+    # Usually we would filter by staff_id if assigned, but here we use branch
+    queue = conn.execute('''
+        SELECT q.*, s.name_uz as service_name 
+        FROM queues q
+        LEFT JOIN services s ON q.service_id = s.id
+        WHERE q.branch_id = ? AND q.status IN ('called', 'serving')
+        ORDER BY q.called_at DESC LIMIT 1
+    ''', (branch_id,)).fetchone()
+    conn.close()
+    
+    if queue:
+        return jsonify({"success": True, "queue": dict(queue)})
+    return jsonify({"success": False, "message": "No active queue"}), 404
 
 @app.route('/api/auth/check-status', methods=['POST'])
 def check_auth_status():
@@ -851,46 +1164,55 @@ def notification_scheduler():
         time.sleep(60)
 
 # Startup logic
-print("🚀 Operator AI System is preparing to run...")
-print(f"📦 Environment Check: BOT_TOKEN={'set' if BOT_TOKEN else 'MISSING'}, GEMINI={'set' if GEMINI_API_KEY else 'MISSING'}")
+print("Operator AI System is preparing to run...")
+print(f"Environment Check: BOT_TOKEN={'set' if BOT_TOKEN else 'MISSING'}, GEMINI={'set' if GEMINI_API_KEY else 'MISSING'}")
 
 # Start scheduler thread
 try:
     threading.Thread(target=notification_scheduler, daemon=True).start()
-    print("⏰ Notification scheduler thread started.")
+    print("Notification scheduler thread started.")
 except Exception as e:
-    print(f"❌ Error starting scheduler: {e}")
+    print(f"[ERROR] Error starting scheduler: {e}")
 
 # Start Bot Polling thread
 def run_bot_polling():
-    try:
-        if BOT_TOKEN:
-            print("🤖 Bot polling thread started...")
-            bot.infinity_polling()
-    except Exception as e:
-        print(f"❌ Bot Polling Error: {e}")
+    while True: # Keep the thread alive even after errors
+        try:
+            if BOT_TOKEN:
+                print("Bot status: Attempting to connect to Telegram... (Polling)")
+                bot.remove_webhook() # Clean up any old webhooks
+                bot.infinity_polling(timeout=20, long_polling_timeout=20)
+            else:
+                print("Bot polling skipped: No BOT_TOKEN.")
+                break
+        except Exception as e:
+            print(f"[ERROR] Bot Polling Error (Retrying in 5s): {e}")
+            time.sleep(5)
 
 try:
-    threading.Thread(target=run_bot_polling, daemon=True).start()
+    print("Attempting to start Bot background service...")
+    eventlet.spawn(run_bot_polling)
+    print("Bot background service spawned (eventlet).")
 except Exception as e:
-    print(f"❌ Error starting bot polling: {e}")
+    print(f"[ERROR] Error spawning bot polling: {e}")
 
 if __name__ == '__main__':
     try:
         # Check static folder
         abs_static = os.path.abspath(app.static_folder)
-        print(f"📁 Static folder: {abs_static}")
-        print(f"📂 Folder exists: {os.path.exists(abs_static)}")
+        abs_static = os.path.abspath(app.static_folder)
+        print(f"Static folder: {abs_static}")
+        print(f"Folder exists: {os.path.exists(abs_static)}")
         if os.path.exists(abs_static):
-            print(f"📄 Files in static: {os.listdir(abs_static)[:5]}...")
+            print(f"Files in static: {os.listdir(abs_static)[:5]}...")
             
         # Use dynamic port for Render
         port = int(os.environ.get("PORT", 5000))
-        print(f"🌐 Running script mode on 0.0.0.0:{port}")
+        print(f"Running script mode on 0.0.0.0:{port}")
         
         # Run with eventlet
         socketio.run(app, port=port, host='0.0.0.0', allow_unsafe_werkzeug=True)
     except Exception as e:
-        print(f"‼️ CRITICAL CRASH ON STARTUP: {e}")
+        print(f"CRITICAL CRASH ON STARTUP: {e}")
         import traceback
         traceback.print_exc()

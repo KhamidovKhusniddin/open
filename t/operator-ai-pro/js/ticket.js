@@ -71,21 +71,32 @@ function renderTicket(queue) {
     }
 
     // Generate QR Code
-    // Content: URL to tracker page for scanning
     const qrContent = `${window.location.origin}/tracker.html?id=${queue.id}`;
-
-    // Clear previous
     const qrContainer = document.getElementById('qrcode');
-    if (qrContainer) {
-        qrContainer.innerHTML = '';
+    const qrImg = document.getElementById('t-qr');
+
+    if (qrContainer && typeof QRCode !== 'undefined') {
+        qrContainer.innerHTML = ''; // Clear the current img tag
         new QRCode(qrContainer, {
             text: qrContent,
             width: 128,
             height: 128,
-            colorDark: "#000000",
+            colorDark: "#0f172a",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
         });
+
+        // Ensure the generated canvas/img is centered and styled
+        setTimeout(() => {
+            const generated = qrContainer.querySelector('img, canvas');
+            if (generated) {
+                generated.style.display = 'block';
+                generated.style.margin = '0 auto';
+                generated.style.borderRadius = '8px';
+            }
+        }, 100);
+    } else if (qrImg) {
+        qrImg.src = Utils.generateQRCode(qrContent, 128);
     }
 }
 

@@ -63,6 +63,7 @@
 
             <nav class="side-nav">
                 <a href="#" class="nav-item active"><i class="fas fa-th-large"></i> Dashboard</a>
+                <a href="#" class="nav-item"><i class="fas fa-star"></i> Reytinglar</a>
                 <a href="#" class="nav-item"><i class="fas fa-chart-line"></i> Analitika</a>
                 <a href="#" class="nav-item"><i class="fas fa-list-ol"></i> Navbatlar</a>
                 <a href="#" class="nav-item"><i class="fas fa-history"></i> Tarix</a>
@@ -137,8 +138,7 @@
                             <button class="btn btn-warning" id="btn-recall"><i class="fas fa-bell"></i> Qayta
                                 Chaqirish</button>
                             <button class="btn btn-danger" id="btn-noshow"><i class="fas fa-times"></i> Kelmadi</button>
-                            <button class="btn btn-outline" id="btn-transfer"
-                                style="border-color: var(--primary-color); color: var(--primary-light);">
+                            <button class="btn-transfer" id="btn-transfer">
                                 <i class="fas fa-random"></i> Yo'naltirish
                             </button>
                         </div>
@@ -199,6 +199,54 @@
                     <p id="ai-insight" style="color: var(--text-secondary); line-height: 1.6;">
                         Ma'lumotlar tahlil qilinmoqda...
                     </p>
+                </div>
+            </div>
+
+            <!-- View: Ratings -->
+            <div id="view-ratings" class="view-section hidden">
+                <header class="top-bar">
+                    <h1>Xizmat Ko'rsatish Reytingi</h1>
+                </header>
+                <div class="stats-grid" id="ratings-container">
+                    <!-- JS will populate -->
+                </div>
+
+                <div class="card card-glass mt-xl">
+                    <h3>Xizmatlar bo'yicha tahlil</h3>
+                    <div class="table-container">
+                        <table class="queue-table">
+                            <thead>
+                                <tr>
+                                    <th>Xizmat nomi</th>
+                                    <th>O'rtacha ball</th>
+                                    <th>Ovozlar soni</th>
+                                    <th>Holat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ratings-table-body">
+                                <!-- JS will populate -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card card-glass mt-xl">
+                    <h3>Oxirgi fikr-mulohazalar</h3>
+                    <div class="table-container">
+                        <table class="queue-table">
+                            <thead>
+                                <tr>
+                                    <th>Raqam</th>
+                                    <th>Ball</th>
+                                    <th>Izoh</th>
+                                    <th>Sana</th>
+                                </tr>
+                            </thead>
+                            <tbody id="feedback-list-body">
+                                <!-- JS will populate -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 

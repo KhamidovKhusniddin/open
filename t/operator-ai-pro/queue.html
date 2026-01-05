@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="css/main.css?v=8">
     <link rel="stylesheet" href="css/queue.css?v=8">
     <link rel="stylesheet" href="css/chatbot.css?v=8">
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         .time-slots {
             display: grid;
@@ -346,7 +348,9 @@
                     </div>
 
                     <div class="ticket-qr"
-                        style="background: transparent; border: 2px dashed var(--glass-border); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;">
+                        style="background: transparent; border: 2px dashed var(--glass-border); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem;">
+                        <img id="ticket-qr-code" src="" alt="QR Code"
+                            style="width: 150px; height: 150px; margin-bottom: 1rem; border-radius: 8px;">
                         <span
                             style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin-bottom: 0.5rem;"
                             data-i18n="your_number">NAVBAT RAQAMI</span>

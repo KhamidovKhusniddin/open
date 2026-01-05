@@ -106,6 +106,10 @@ const Language = {
             'resume_service': 'Xizmatni davom ettirish',
             'today_stats': 'Bugungi statistika',
             'served_today': 'Bugun xizmat ko\'rsatildi',
+            'no_current_queue': 'Hozirda navbat yo\'q',
+            'patient_history': 'Bemorg tashxislar tarixi',
+            'notes_placeholder': 'Tibbiy izoh yoki tashxis...',
+            'transfer_to': 'Yo\'naltirish:',
 
             // Display Screen
             'now_serving': 'HOZIR XIZMAT KO\'RSATILMOQDA',

@@ -56,6 +56,8 @@ def init_db():
             created_at TEXT,
             last_notified TEXT,
             notification_level INTEGER DEFAULT 0,
+            notes TEXT, -- Medical notes or results
+            parent_queue_id TEXT, -- For tracking referrals/transfers
             FOREIGN KEY (org_id) REFERENCES organizations(id)
         )
     ''')
@@ -87,6 +89,11 @@ def init_db():
         c.execute('ALTER TABLE queues ADD COLUMN org_id TEXT')
     except: pass
 
+    try:
+        c.execute('ALTER TABLE queues ADD COLUMN notes TEXT')
+        c.execute('ALTER TABLE queues ADD COLUMN parent_queue_id TEXT')
+    except: pass
+
     # services table
     c.execute('''
         CREATE TABLE IF NOT EXISTS services (
@@ -106,7 +113,7 @@ def init_db():
 
     conn.commit()
     conn.close()
-    print("✅ Database initialized with Multi-Tenant schema")
+    print("Database initialized with Multi-Tenant schema")
 
 # --- Organization Management ---
 
@@ -200,26 +207,46 @@ def add_queue(queue_data):
     conn = get_db_connection()
     c = conn.cursor()
     try:
-        # Generate internal ID if not provided as UUID compatible
+        # --- PREVENT DOUBLE BOOKING ---
+        date = queue_data.get('date')
+        time = queue_data.get('time')
+        staff_id = queue_data.get('staffId')
+        
+        if date and time and staff_id:
+            existing = conn.execute('''
+                SELECT id FROM queues 
+                WHERE date = ? AND time = ? AND staff_id = ? 
+                AND status NOT IN ('cancelled', 'no-show')
+            ''', (date, time, staff_id)).fetchone()
+            
+            if existing:
+                print(f"Slot taken: {date} {time} for staff {staff_id}")
+                return False
+        # ------------------------------
+
+        # Generate internal ID if not provided
         import uuid
         internal_id = queue_data.get('id') or str(uuid.uuid4())
         
         c.execute('''
-            INSERT INTO queues (id, phone, number, status, date, time, staff_id, service_id, branch_id, created_at, last_notified, notification_level)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO queues (id, phone, number, status, date, time, staff_id, service_id, branch_id, created_at, last_notified, notification_level, notes, parent_queue_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             internal_id,
             normalize_phone(queue_data['phone']),
             queue_data['number'],
             queue_data.get('status', 'waiting'),
-            queue_data.get('date'),
-            queue_data.get('time'),
-            queue_data.get('staffId'),
+            date,
+            time,
+            staff_id,
             queue_data.get('serviceId'),
             queue_data.get('branchId'),
             queue_data.get('created_at', datetime.now().isoformat()),
             queue_data.get('last_notified', datetime.now().isoformat()),
-            0 
+            0, # notification_level
+            0, # placeholder for something else if needed
+            queue_data.get('notes'),
+            queue_data.get('parent_queue_id')
         ))
         conn.commit()
         return True
@@ -228,6 +255,18 @@ def add_queue(queue_data):
         return False
     finally:
         conn.close()
+
+def get_booked_slots(date, branch_id, staff_id=None):
+    conn = get_db_connection()
+    query = 'SELECT time FROM queues WHERE date = ? AND branch_id = ? AND status NOT IN ("cancelled", "no-show")'
+    params = [date, branch_id]
+    if staff_id and staff_id != 'anyone':
+        query += ' AND staff_id = ?'
+        params.append(staff_id)
+    
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+    return [r['time'] for r in rows]
 
 def get_queue(queue_id):
     conn = get_db_connection()
@@ -247,6 +286,20 @@ def get_queues_by_phone(phone, date=None):
         params.append(date)
     
     queues = conn.execute(query, params).fetchall()
+    conn.close()
+    return [dict(q) for q in queues]
+
+def get_patient_history(phone):
+    phone = normalize_phone(phone)
+    conn = get_db_connection()
+    # Join with services to get service name
+    queues = conn.execute('''
+        SELECT q.*, s.name_uz as service_name 
+        FROM queues q
+        LEFT JOIN services s ON q.service_id = s.id
+        WHERE q.phone = ? AND q.status = 'completed'
+        ORDER BY q.created_at DESC
+    ''', (phone,)).fetchall()
     conn.close()
     return [dict(q) for q in queues]
 
@@ -272,14 +325,81 @@ def get_all_queues_list():
 def update_queue_status(queue_id, status):
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute('UPDATE queues SET status = ?, last_notified = ? WHERE id = ?', (status, datetime.now().isoformat(), queue_id))
+    # If completed, set completed_at
+    now = datetime.now().isoformat()
+    if status in ['completed', 'no-show', 'noshow']:
+        c.execute('UPDATE queues SET status = ?, last_notified = ?, completed_at = ? WHERE id = ?', (status, now, now, queue_id))
+    else:
+        c.execute('UPDATE queues SET status = ?, last_notified = ? WHERE id = ?', (status, now, queue_id))
     conn.commit()
     conn.close()
+
+def add_rating(queue_id, rating, comment):
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+            INSERT INTO ratings (queue_id, rating, comment, created_at)
+            VALUES (?, ?, ?, ?)
+        ''', (queue_id, rating, comment, datetime.now().isoformat()))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error adding rating: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_average_ratings(org_id=None):
+    conn = get_db_connection()
+    try:
+        query = '''
+            SELECT s.name_uz as service_name, AVG(r.rating) as avg_rating, COUNT(r.id) as count
+            FROM ratings r
+            JOIN queues q ON r.queue_id = q.id
+            JOIN services s ON q.service_id = s.id
+        '''
+        params = []
+        if org_id:
+            query += ' WHERE q.org_id = ?'
+            params.append(org_id)
+        
+        query += ' GROUP BY s.id'
+        ratings = conn.execute(query, params).fetchall()
+        return [dict(r) for r in ratings]
+    finally:
+        conn.close()
+
+def get_recent_feedback(org_id=None, limit=20):
+    conn = get_db_connection()
+    try:
+        query = '''
+            SELECT r.*, q.number as queue_number
+            FROM ratings r
+            JOIN queues q ON r.queue_id = q.id
+        '''
+        params = []
+        if org_id:
+            query += ' WHERE q.org_id = ?'
+            params.append(org_id)
+            
+        query += ' ORDER BY r.created_at DESC LIMIT ?'
+        params.append(limit)
+        
+        feedback = conn.execute(query, params).fetchall()
+        return [dict(f) for f in feedback]
+    finally:
+        conn.close()
 
 def update_notification_level(queue_id, level):
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute('UPDATE queues SET notification_level = ? WHERE id = ?', (level, queue_id))
+    conn.commit()
+    conn.close()
+
+def update_queue_notes(queue_id, notes):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute('UPDATE queues SET notes = ? WHERE id = ?', (notes, queue_id))
     conn.commit()
     conn.close()
 

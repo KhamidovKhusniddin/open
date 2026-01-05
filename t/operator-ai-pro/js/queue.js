@@ -138,7 +138,7 @@ const QueueApp = {
         this.goToStep(3);
     },
 
-    loadServices(branchId) {
+    async loadServices(branchId) {
         const services = Database.getServices(branchId);
         const grid = document.getElementById('services-grid');
 
@@ -147,16 +147,35 @@ const QueueApp = {
             return;
         }
 
-        grid.innerHTML = services.map(service => `
-      <div class="service-item" id="service-${service.id}" onclick="QueueApp.selectService('${service.id}')">
-        <span class="item-icon">📋</span>
-        <div class="item-name">${service.name}</div>
-        <div class="item-desc">${service.nameUz || service.name}</div>
-        <div class="service-duration" style="margin-top:0.5rem; color:var(--primary-light);">
-          <span>⏱ ~${service.estimatedDuration} daqiqa</span>
-        </div>
-      </div>
-    `).join('');
+        // Fetch real-time wait times from backend
+        let waitTimes = {};
+        try {
+            const resp = await fetch(`${CONFIG.api.verificationURL}/api/branch-wait-times?branch_id=${branchId}`);
+            const data = await resp.json();
+            if (data.success) {
+                waitTimes = data.wait_times;
+            }
+        } catch (e) {
+            console.error("Wait times fetch failed", e);
+        }
+
+        grid.innerHTML = services.map(service => {
+            const waitInfo = waitTimes[service.id];
+            const waitText = waitInfo ?
+                `<span style="color:var(--primary-color)">⏳ ${waitInfo.wait_time} daqiqa kutiladi (${waitInfo.people} kishi)</span>` :
+                `<span>⏱ ~${service.estimatedDuration} daqiqa</span>`;
+
+            return `
+              <div class="service-item" id="service-${service.id}" onclick="QueueApp.selectService('${service.id}')">
+                <span class="item-icon">📋</span>
+                <div class="item-name">${service.name}</div>
+                <div class="item-desc">${service.nameUz || service.name}</div>
+                <div class="service-duration" style="margin-top:0.5rem; font-size:0.85rem;">
+                   ${waitText}
+                </div>
+              </div>
+            `;
+        }).join('');
     },
 
     async selectService(serviceId) {
@@ -258,7 +277,7 @@ const QueueApp = {
         });
     },
 
-    loadTimeSlots(date) {
+    async loadTimeSlots(date) {
         const timeSelection = document.getElementById('time-selection');
         const slotsGrid = document.getElementById('time-slots');
         timeSelection.classList.remove('hidden');
@@ -270,13 +289,19 @@ const QueueApp = {
             slots.push(`${hour.toString().padStart(2, '0')}:30`);
         }
 
-        // Get already booked slots for this date, branch and staff
-        const bookings = Database.getQueues().filter(q =>
-            q.date === date &&
-            q.branchId === this.selectedBranch &&
-            (this.selectedStaff === 'anyone' || q.staffId === this.selectedStaff)
-        );
-        const bookedTimes = bookings.map(b => b.time);
+        // --- FETCH BOOKED SLOTS FROM BACKEND ---
+        let bookedTimes = [];
+        try {
+            const url = `${CONFIG.api.verificationURL}/api/booked-slots?date=${date}&branch_id=${this.selectedBranch}&staff_id=${this.selectedStaff}`;
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data.success) {
+                bookedTimes = data.slots;
+            }
+        } catch (e) {
+            console.error("Failed to fetch booked slots:", e);
+        }
+        // ---------------------------------------
 
         slotsGrid.innerHTML = slots.map(time => {
             const isBooked = bookedTimes.includes(time);
@@ -467,7 +492,10 @@ const QueueApp = {
                         number: queue.queueNumber,
                         status: queue.status,
                         date: queue.date,
-                        time: queue.time
+                        time: queue.time,
+                        branchId: this.selectedBranch,
+                        serviceId: this.selectedService,
+                        staffId: this.selectedStaff === 'anyone' ? null : this.selectedStaff
                     })
                 }).catch(err => console.error('Sync failed:', err));
 
@@ -497,8 +525,36 @@ const QueueApp = {
         document.getElementById('ticket-time').textContent = queue.time;
         document.getElementById('ticket-date').textContent = queue.date;
 
-        const qrCode = Utils.generateQRCode(queue.id);
-        document.getElementById('ticket-qr-code').src = qrCode;
+        const qrContent = `${window.location.origin}/tracker.html?id=${queue.id}`;
+        const qrContainer = document.querySelector('.ticket-qr');
+        const qrImg = document.getElementById('ticket-qr-code');
+
+        if (qrContainer && typeof QRCode !== 'undefined') {
+            // Check if we already have a container for QRCode, otherwise use the existing parent
+            qrContainer.innerHTML = ''; // This will remove the old img and text
+            const qrWrapper = document.createElement('div');
+            qrWrapper.id = 'qrcode-wrapper';
+            qrContainer.appendChild(qrWrapper);
+
+            new QRCode(qrWrapper, {
+                text: qrContent,
+                width: 150,
+                height: 150,
+                colorDark: "#0f172a",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            // Re-add the BIG Number text that was inside qrContainer
+            const bigNum = document.createElement('span');
+            bigNum.id = 'ticket-number-big';
+            bigNum.style = 'font-size: 3.5rem; font-weight: 800; color: var(--primary-color); line-height: 1; font-family: var(--font-display); text-shadow: var(--glow-primary); margin-top: 1rem;';
+            bigNum.textContent = queue.queueNumber;
+            qrContainer.appendChild(bigNum);
+        } else if (qrImg) {
+            qrImg.src = Utils.generateQRCode(qrContent, 150);
+            document.getElementById('ticket-number-big').textContent = queue.queueNumber;
+        }
     },
 
     startRealTimeUpdates() {

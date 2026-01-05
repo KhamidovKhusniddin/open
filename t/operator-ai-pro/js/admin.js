@@ -113,6 +113,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     fetchAnalytics();
                 } else if (viewName === 'navbatlar') {
                     document.getElementById('view-queues').classList.remove('hidden');
+                } else if (viewName === 'reytinglar') {
+                    document.getElementById('view-ratings').classList.remove('hidden');
+                    fetchRatings();
                 } else if (viewName === 'tashkilotlar') {
                     document.getElementById('view-organizations').classList.remove('hidden');
                     fetchOrganizations();
@@ -414,6 +417,72 @@ document.addEventListener('DOMContentLoaded', () => {
                 'noshow': 'Kelmadi'
             };
             return labels[status] || status;
+        }
+
+        async function fetchRatings() {
+            try {
+                const resp = await secureFetch('/api/admin/ratings');
+                const result = await resp.json();
+                if (result.success) {
+                    renderRatings(result.ratings, result.recent || []);
+                }
+            } catch (err) {
+                console.error('Ratings fetch error:', err);
+            }
+        }
+
+        function renderRatings(ratings, recent) {
+            const container = document.getElementById('ratings-container');
+            const tbody = document.getElementById('ratings-table-body');
+            const feedbackBody = document.getElementById('feedback-list-body');
+
+            container.innerHTML = '';
+            tbody.innerHTML = '';
+            if (feedbackBody) feedbackBody.innerHTML = '';
+
+            ratings.forEach(r => {
+                // Large Card for each service
+                const card = document.createElement('div');
+                card.className = 'stat-card';
+                const avg = parseFloat(r.avg_rating).toFixed(1);
+                const stars = "⭐".repeat(Math.round(avg));
+
+                card.innerHTML = `
+                    <div class="icon orange" style="font-size: 1.2rem;">${avg}</div>
+                    <div class="details">
+                        <span class="label">${r.service_name}</span>
+                        <span class="value" style="font-size: 1.2rem;">${stars}</span>
+                        <span class="label">${r.count} ta baho</span>
+                    </div>
+                `;
+                container.appendChild(card);
+
+                // Table row
+                const tr = document.createElement('tr');
+                const status = avg >= 4 ? '<span class="badge serving">A\'lo</span>' : (avg >= 3 ? '<span class="badge waiting">Yaxshi</span>' : '<span class="badge noshow">Qoniqarsiz</span>');
+                tr.innerHTML = `
+                    <td><strong>${r.service_name}</strong></td>
+                    <td>${avg} / 5.0</td>
+                    <td>${r.count}</td>
+                    <td>${status}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Render Recent Feedback
+            if (feedbackBody && recent) {
+                recent.forEach(f => {
+                    const tr = document.createElement('tr');
+                    const stars = "⭐".repeat(f.rating);
+                    tr.innerHTML = `
+                        <td>${f.queue_number}</td>
+                        <td>${stars} (${f.rating})</td>
+                        <td>${f.comment || '-'}</td>
+                        <td style="font-size: 0.8rem; color: var(--text-secondary)">${new Date(f.created_at).toLocaleString()}</td>
+                    `;
+                    feedbackBody.appendChild(tr);
+                });
+            }
         }
 
         window.logoutAdmin = () => {
