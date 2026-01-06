@@ -1,0 +1,43 @@
+# Render.com Manual Deployment - Kerakli Fayllar
+
+## Quyidagi fayllarni ZIP ga qo'shing:
+
+### Core Files:
+- app.py
+- bot.py  
+- database.py
+- requirements.txt
+- Procfile
+- runtime.txt
+
+### Frontend (butun papka):
+- t/operator-ai-pro/ (ichidagi barcha fayllar bilan)
+
+## ZIP yaratish:
+
+1. Yangi papka yarating: "render-deploy"
+2. Quyidagi fayllarni ko'chiring:
+   - app.py
+   - bot.py
+   - database.py
+   - requirements.txt
+   - Procfile
+   - runtime.txt
+   - t/ (butun papka)
+
+3. "render-deploy" papkasini ZIP qiling
+
+4. Render.com'da:
+   - New Web Service
+   - Upload ZIP
+   - Environment Variables qo'shing
+   - Deploy!
+
+## Environment Variables:
+```
+BOT_TOKEN=<telegram_bot_token>
+GEMINI_API_KEY=<google_api_key>
+JWT_SECRET_KEY=<random_secret>
+ADMIN_PHONE=+998901234567
+ADMIN_PASSWORD=<secure_password>
+```
