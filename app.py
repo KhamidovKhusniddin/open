@@ -1,5 +1,4 @@
-from gevent import monkey
-monkey.patch_all()
+# Flask Queue Management System
 
 print("[INFO] Pulse: app.py is starting execution...")
 
@@ -42,7 +41,7 @@ if not app.config['JWT_SECRET_KEY']:
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -1211,8 +1210,8 @@ if __name__ == '__main__':
         port = int(os.environ.get("PORT", 5000))
         print(f"Running script mode on 0.0.0.0:{port}")
         
-        # Run with gevent
-        socketio.run(app, port=port, host='0.0.0.0', debug=False)
+        # Run with threading
+        socketio.run(app, port=port, host='0.0.0.0', debug=False, use_reloader=False)
     except Exception as e:
         print(f"CRITICAL CRASH ON STARTUP: {e}")
         import traceback
