@@ -65,6 +65,29 @@ else:
 # In-memory storage for AI chat sessions
 chat_sessions = {}
 
+@app.route('/api/realtime/proxy', methods=['POST', 'OPTIONS'])
+def realtime_proxy():
+    """OpenAI Realtime WebRTC Proxy to fix CORS"""
+    if request.method == 'OPTIONS':
+        return '', 200
+    try:
+        sdp_offer = request.data.decode('utf-8')
+        print(f"[DEBUG] OpenAI Proxy: Received SDP (len={len(sdp_offer)})")
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return "OpenAI API Key is missing in server environment", 500
+        url = "https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/sdp"
+        }
+        res = requests.post(url, data=sdp_offer, headers=headers)
+        print(f"[DEBUG] OpenAI API Response: {res.status_code}")
+        return res.text, res.status_code
+    except Exception as e:
+        print(f"[ERROR] OpenAI Proxy Error: {str(e)}")
+        return str(e), 500
+
 # Initialize Bot safely
 class DummyBot:
     def __getattr__(self, name):
@@ -1196,6 +1219,7 @@ try:
 except Exception as e:
     print(f"[ERROR] Error starting bot polling: {e}")
 
+
 if __name__ == '__main__':
     try:
         # Check static folder
@@ -1211,7 +1235,7 @@ if __name__ == '__main__':
         print(f"Running script mode on 0.0.0.0:{port}")
         
         # Run with threading
-        socketio.run(app, port=port, host='0.0.0.0', debug=False, use_reloader=False)
+        socketio.run(app, port=port, host='0.0.0.0', debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
     except Exception as e:
         print(f"CRITICAL CRASH ON STARTUP: {e}")
         import traceback

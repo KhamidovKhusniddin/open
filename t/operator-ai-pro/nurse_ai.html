@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Hamshira - Immersive Interface</title>
+    <link rel="stylesheet" href="css/nurse_ai.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="immersive-wrapper">
+        <!-- Background Ambient Elements -->
+        <div class="ambient-glow top-left"></div>
+        <div class="ambient-glow bottom-right"></div>
+        <div class="scan-line"></div>
+
+        <!-- Main AI Nurse (Foreground) -->
+        <div class="nurse-stage">
+            <img src="img/ai_nurse_avatar.png" alt="AI Nurse" class="main-nurse">
+            <div class="voice-aura"></div>
+            <div class="mouth-visualizer">
+                <div class="mouth-bar"></div>
+                <div class="mouth-bar"></div>
+                <div class="mouth-bar"></div>
+                <div class="mouth-bar"></div>
+                <div class="mouth-bar"></div>
+            </div>
+            <div class="face-scanner"></div>
+
+            <!-- Floating Holographic Info -->
+            <div class="hologram-overlay h-1">
+                <div class="h-content">
+                    <i class="fas fa-heartbeat"></i>
+                    <span>Sizning holatingiz: <strong>Normal</strong></span>
+                </div>
+            </div>
+            <div class="hologram-overlay h-2">
+                <div class="h-content">
+                    <i class="fas fa-user-clock"></i>
+                    <span>Navbat: <strong>A-124</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Overlays -->
+        <div class="ui-overlay">
+            <header class="top-bar">
+                <div class="logo">
+                    <i class="fas fa-shield-halved"></i>
+                    <span>Tibbiy AI</span>
+                </div>
+                <div class="status-indicator">
+                    <span class="pulse-dot"></span> Online
+                </div>
+            </header>
+
+            <div class="transcription-container">
+                <div class="ai-msg-bubble">
+                    <p id="typed-text">Assalomu alaykum! Men sizning shaxsiy tibbiy yordamchingizman. Bugun sizga qanday
+                        yordam bera olaman?</p>
+                </div>
+            </div>
+
+            <footer class="bottom-actions">
+                <div class="user-preview">
+                    <div class="user-vatar">K</div>
+                    <div class="audio-waves">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+
+                <div class="main-controls">
+                    <button class="action-btn secondary"><i class="fas fa-keyboard"></i></button>
+                    <button class="action-btn primary mic-trigger">
+                        <i class="fas fa-microphone"></i>
+                        <div class="ripple"></div>
+                    </button>
+                    <button class="action-btn secondary"><i class="fas fa-lightbulb"></i></button>
+                </div>
+
+                <div class="side-options">
+                    <button class="small-btn"><i class="fas fa-cog"></i></button>
+                    <button class="small-btn close"><i class="fas fa-times"></i></button>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script src="js/nurse_ai.js"></script>
+</body>
+
+</html>
