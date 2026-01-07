@@ -1,5 +1,6 @@
 /**
- * Zilola AI - OpenAI Realtime (Final Ultimate Audio Fix)
+ * Zilola AI - OpenAI Realtime (Ultimate WebRTC Fix)
+ * Optimized for guaranteed audio playback and reliable connection.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -8,118 +9,139 @@ document.addEventListener('DOMContentLoaded', () => {
     const micBtn = document.querySelector('.mic-trigger');
     const waves = document.querySelectorAll('.audio-waves span');
 
-    let peerConnection = null;
-    let dataChannel = null;
-    let audioStream = null;
+    let pc = null;
+    let dc = null;
+    let stream = null;
 
-    // Ovoz uchun doimiy element
+    // Global audio element to prevent garbage collection
     const audioEl = document.createElement("audio");
     audioEl.autoplay = true;
     document.body.appendChild(audioEl);
 
     async function startZilola() {
         try {
-            // Audio tizimini uyg'otish
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            const audioCtx = new AudioContext();
-            if (audioCtx.state === 'suspended') {
-                await audioCtx.resume();
-            }
+            console.log("Zilola: Starting session...");
+            textElement.innerText = "Zilola bilan ulanish o'rnatilmoqda...";
 
-            textElement.innerText = "Zilola bilan aloqa o'rnatilmoqda...";
+            // 1. Setup PeerConnection with Transceiver
+            pc = new RTCPeerConnection();
 
-            peerConnection = new RTCPeerConnection();
+            // 2. Add Audio Transceiver (Recommended for OpenAI WebRTC)
+            pc.addTransceiver('audio', { direction: 'sendrecv' });
 
-            // AI OVOZI KELGANDA (ASOSIY QISM)
-            peerConnection.ontrack = e => {
-                console.log("DEBUG: Audio keldi!");
+            // 3. Handle incoming audio
+            pc.ontrack = e => {
+                console.log("Zilola: Incoming audio stream detected!");
                 audioEl.srcObject = e.streams[0];
-                audioEl.play().catch(err => {
-                    // Agar bloklansa, foydalanuvchidan ruxsat so'rash
-                    textElement.innerText = "Ovozni yoqish uchun ekraningizga bitta bosing!";
-                    window.addEventListener('click', () => audioEl.play(), { once: true });
-                });
 
+                // Visual feedback
                 nurseImage.classList.add('speaking');
                 waves.forEach(wave => wave.style.animationPlayState = 'running');
+
+                // Try to play immediately
+                audioEl.play().catch(err => {
+                    console.warn("Autoplay blocked by browser. User interaction required.");
+                    textElement.innerText = "Iltimos, ovozni yoqish uchun ekranga bir marta bosing.";
+                    window.addEventListener('click', () => {
+                        audioEl.play();
+                        textElement.innerText = "Rahmat! Zilola gapiryapti...";
+                    }, { once: true });
+                });
             };
 
-            // Mikrofon ruxsati
-            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            audioStream.getTracks().forEach(track => peerConnection.addTrack(track, audioStream));
+            // 4. Capture Microphone
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-            // Data Channel
-            dataChannel = peerConnection.createDataChannel("oai-events");
-            dataChannel.onmessage = (e) => {
+            // 5. Setup Data Channel
+            dc = pc.createDataChannel("oai-events");
+
+            dc.onmessage = (e) => {
                 const event = JSON.parse(e.data);
+
+                // Transcription delta
                 if (event.type === "response.audio_transcript.delta") {
                     if (textElement.innerText.includes("...")) textElement.innerText = "";
                     textElement.innerText += event.delta;
                 }
-                if (event.type === "response.done") {
-                    nurseImage.classList.remove('speaking');
-                    waves.forEach(wave => wave.style.animationPlayState = 'paused');
+
+                // Speech started/ended indicators
+                if (event.type === "response.audio_done") {
+                    console.log("Zilola: Finished speaking.");
+                }
+
+                if (event.type === "input_audio_buffer.speech_started") {
+                    console.log("User: Started speaking.");
+                    // Stop AI if it was speaking (handled by server_vad usually)
                 }
             };
 
-            // OpenAI Sozlamalari (FORCE SPEECH)
-            dataChannel.onopen = () => {
+            // 6. Configure Session on Open
+            dc.onopen = () => {
+                console.log("Zilola: Data channel opened. Sending configuration...");
+
                 const sessionUpdate = {
                     type: "session.update",
                     session: {
-                        instructions: "Sening isming Zilola. Poliklinika hamshirasisan. O'ta mayin va insoniy ovozda faqat O'ZBEK tilida gapir. Ulanishing bilan darhol o'zingni tanishtirib, bemorni qutla. Pauza qilma!",
+                        instructions: "Sening isming Zilola. Poliklinika hamshirasisan. O'ta mayin, muloyim va professional o'zbek tilida gapir. Javoblaringni doim ham matn (text), ham ovoz (audio) ko'rinishida ber. Hozir ulanishing bilan darhol o'zingni tanishtir va bemorga salom ber.",
                         voice: "shimmer",
                         modalities: ["text", "audio"],
-                        turn_detection: { type: "server_vad" }
+                        turn_detection: { type: "server_vad" },
+                        input_audio_format: "pcm16",
+                        output_audio_format: "pcm16"
                     }
                 };
-                dataChannel.send(JSON.stringify(sessionUpdate));
+                dc.send(JSON.stringify(sessionUpdate));
 
-                // Darhol javob yaratish buyrug'i
-                dataChannel.send(JSON.stringify({
+                // Trigger immediate greeting
+                const initialGreeting = {
                     type: "response.create",
                     response: {
                         modalities: ["audio", "text"],
-                        instructions: "Assalomu alaykum, men Zilolaman. Sizga qanday yordam bera olaman?"
+                        instructions: "O'zbek tilida salom ber va 'Men Zilolaman, sizni eshityapman' deb ayt."
                     }
-                }));
+                };
+                dc.send(JSON.stringify(initialGreeting));
 
-                textElement.innerText = "Zilola sizni eshitmoqda...";
+                textElement.innerText = "Zilola tayyor. Marhamat gapiring!";
             };
 
-            // SDP Offer (Backend orqali)
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
+            // 7. WebRTC Offer/Answer via Proxy
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
 
-            const response = await fetch('/api/realtime/proxy', {
+            const res = await fetch('/api/realtime/proxy', {
                 method: "POST",
                 body: offer.sdp,
                 headers: { "Content-Type": "application/sdp" }
             });
 
-            if (!response.ok) throw new Error("Server ulanishda xato qildi.");
+            if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
 
-            const answer = { type: "answer", sdp: await response.text() };
-            await peerConnection.setRemoteDescription(answer);
+            const answerSdp = await res.text();
+            await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+            console.log("Zilola: Connection established successfully.");
 
         } catch (err) {
-            console.error(err);
+            console.error("Zilola Error:", err);
             textElement.innerText = "Xato: " + err.message;
             stopZilola();
         }
     }
 
     function stopZilola() {
-        if (peerConnection) peerConnection.close();
-        if (audioStream) audioStream.getTracks().forEach(track => track.stop());
-        peerConnection = null;
+        if (pc) pc.close();
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        pc = null;
+        dc = null;
         nurseImage.classList.remove('speaking');
         waves.forEach(wave => wave.style.animationPlayState = 'paused');
         textElement.innerText = "Suhbat yakunlandi.";
     }
 
+    // Mic button triggers the whole flow
     micBtn.addEventListener('click', () => {
-        if (!peerConnection) startZilola();
+        if (!pc) startZilola();
         else stopZilola();
     });
 });
