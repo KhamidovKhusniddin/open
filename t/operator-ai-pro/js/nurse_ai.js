@@ -136,7 +136,11 @@ document.addEventListener('DOMContentLoaded', () => {
         dc = null;
         nurseImage.classList.remove('speaking');
         waves.forEach(wave => wave.style.animationPlayState = 'paused');
-        textElement.innerText = "Suhbat yakunlandi.";
+
+        // Agar xato xabari bo'lsa, uni o'chirib yubormaslik
+        if (!textElement.innerText.includes("Xato") && !textElement.innerText.includes("Server xatosi")) {
+            textElement.innerText = "Suhbat yakunlandi.";
+        }
     }
 
     // Mic button triggers the whole flow
